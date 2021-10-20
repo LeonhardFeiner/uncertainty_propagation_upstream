@@ -3,3 +3,5 @@ __pycache__
 wandb
 .vscode
 *.pth
+*.cfl
+*.hdr

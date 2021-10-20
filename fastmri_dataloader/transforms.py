@@ -13,6 +13,22 @@ class Transpose():
             sample[key] = np.ascontiguousarray(np.transpose(sample[key], axes))
         return sample
 
+class ToTorchIO():
+    ''' Move to merlin!'''
+    def __init__(self, input_keys, output_keys):
+        self.input_keys = input_keys
+        self.output_keys = output_keys
+
+    def __call__(self, sample):
+        import torch
+        inputs = []
+        outputs = []
+        for key in self.input_keys:
+            inputs.append(torch.from_numpy(sample[key]))
+        for key in self.output_keys:
+            outputs.append(torch.from_numpy(sample[key]))
+        return inputs, outputs
+
 class GeneratePatches():
     def __init__(self, patch_ny, offset_y, remove_feos=False, multicoil=True):
         self.patch_ny = patch_ny
@@ -379,7 +395,7 @@ def get_keras_transform(mode, config):
     return transform
 
 def get_torch_transform(mode, config):
-    from merlinth.utils import ToTorchIO
+    #from merlinth.utils import ToTorchIO
     if mode == 'singlecoil_train':
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
                                                         accelerations=config['accelerations'],
