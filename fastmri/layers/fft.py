@@ -3,10 +3,12 @@ import unittest
 import numpy as np
 
 def fft2(x, dim=(-2,-1)):
-    return torch.fft.fft2(x, dim=dim, norm='ortho')
+    x = torch.view_as_complex(x)
+    return torch.view_as_real(torch.fft.fft2(x, dim=dim, norm='ortho'))
 
 def ifft2(X, dim=(-2,-1)):
-    return torch.fft.ifft2(X, dim=dim, norm='ortho')
+    X = torch.view_as_complex(X)
+    return torch.view_as_real(torch.fft.ifft2(X, dim=dim, norm='ortho'))
 
 def fft2c(x, dim=(-2,-1)):
     return torch.fft.fftshift(fft2(torch.fft.ifftshift(x, dim), dim), dim)
