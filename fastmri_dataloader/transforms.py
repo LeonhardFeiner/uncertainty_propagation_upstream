@@ -366,7 +366,7 @@ class LoadCoilSensitivities():
         return sample
 
 def get_keras_transform(mode, config):
-    #from merlintf.keras.utils import ToKerasIO
+    from merlintf.keras.utils import ToKerasIO
     if mode == 'singlecoil_train':
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
                                                         accelerations=config['accelerations'],
@@ -395,7 +395,7 @@ def get_keras_transform(mode, config):
     return transform
 
 def get_torch_transform(mode, config):
-    from merlinth.utils import ToTorchIO
+    #from merlinth.utils import ToTorchIO
     if mode == 'singlecoil_train':
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
                                                         accelerations=config['accelerations'],
