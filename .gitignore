@@ -1,2 +1,5 @@
 *.png
 __pycache__
+wandb
+.vscode
+*.pth
