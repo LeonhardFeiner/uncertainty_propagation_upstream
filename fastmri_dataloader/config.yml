@@ -4,7 +4,7 @@ BaseExperiment: &defaults
     batch_size: 8
     singlecoil_train_ds:
         csv_file: ./datasets/fastmri_singlecoil_knee_train.csv
-        full: True
+        full: False
         slices:
             min: 8
         patch:
@@ -13,7 +13,7 @@ BaseExperiment: &defaults
             remove_feos: True
     singlecoil_val_ds:
         csv_file: ./datasets/fastmri_singlecoil_knee_val.csv
-        full: True
+        full: False
         slices:
             min: 12
             max: 25
@@ -26,7 +26,7 @@ BaseExperiment: &defaults
     multicoil_train_ds:
         csv_file: ./datasets/fastmri_multicoil_knee_train.csv
         sens_dir: multicoil_train_espirit
-        full: True
+        full: False
         slices:
             min: 8
         patch:
@@ -36,7 +36,7 @@ BaseExperiment: &defaults
     multicoil_val_ds:
         csv_file: ./datasets/fastmri_multicoil_knee_val.csv
         sens_dir: multicoil_val_espirit
-        full: True
+        full: False
         slices:
             min: 12
             max: 25
