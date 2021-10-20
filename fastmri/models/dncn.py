@@ -27,16 +27,20 @@ class DnCn(nn.Module):
 
     def forward(self, x, k, m):
         """
-        x: input image, [nb, 2， nx, ny], dtype=2-channel complex
-        k: sampled kspace, [nb, 2, nx, ny], dtype=2-channel complex
+        x: input image, [nb, 1， nx, ny], dtype=torch.complex64
+        k: sampled kspace, [nb, 2, nx, ny], dtype=torch.complex64
         mask: sampling mask, [nb, 1, nx, ny], dtype=bool
         """
+        x = torch.view_as_real(x)
+        k = torch.view_as_real(k)
+        
         for i in range(self.nc):
+            
             x_cnn = self.conv_blocks[i](x)
             x += x_cnn
             x = self.dcs[i](x, k, m)
 
-        return x
+        return torch.view_as_complex(x)
 
     
 class ConvBlock(nn.Module):

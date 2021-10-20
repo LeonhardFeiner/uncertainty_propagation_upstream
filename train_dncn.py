@@ -131,7 +131,7 @@ def train(net, device, args):
                 
                 with torch.cuda.amp.autocast(enabled=args.amp):
                     output = net(x0, k0, mask)
-                    loss = criterion(output, gnd)
+                    loss = criterion(torch.view_as_real(output), torch.view_as_real(gnd))
 
                 
                 optimizer.zero_grad(set_to_none=True)
@@ -142,9 +142,9 @@ def train(net, device, args):
                 epoch_loss += loss.item()
 
 
-                x0 = torch.view_as_complex(x0)
-                output = torch.view_as_complex(output)
-                gnd = torch.view_as_complex(gnd)
+                #x0 = torch.view_as_complex(x0)
+                #output = torch.view_as_complex(output)
+                #gnd = torch.view_as_complex(gnd)
 
                 log_input_im = x0[0,:,:].abs()
                 log_output_im = output[0,:,:].abs()
@@ -199,13 +199,13 @@ def train(net, device, args):
                     mask = mask.to(device)
                     
                     output = net(x0, k0, mask)
-                    val_loss = F.l1_loss(output, gnd)
+                    val_loss = F.l1_loss(torch.view_as_real(output), torch.view_as_real(gnd))
 
                     # logging.info('Validation {}/{} loss: {}'.format(idx, ceil(n_val / args.batch_size), val_loss))
 
-                    x0 = torch.view_as_complex(x0)
-                    output = torch.view_as_complex(output)
-                    gnd = torch.view_as_complex(gnd)
+                    # x0 = torch.view_as_complex(x0)
+                    # output = torch.view_as_complex(output)
+                    # gnd = torch.view_as_complex(gnd)
 
                     log_input_im = x0[0,:,:].abs()
                     log_output_im = output[0,:,:].abs()
