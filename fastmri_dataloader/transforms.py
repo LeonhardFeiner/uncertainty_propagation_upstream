@@ -262,15 +262,21 @@ class ComputeInit():
             np_smaps = sample["smaps"]
             np_input = medutils.mri.mriAdjointOpNoShift(
                 np_kspace, np_smaps, np_mask, fft_axes=(-2, -1), coil_axis=(1))
-            norm = np.max(medutils.mri.rss(np_input, 1), axis=(1,2))
         else:
             np_input = medutils.mri.ifft2(np_kspace)
-            norm = np.max(np.abs(np_input), axis=(1,2))
+
+        norm = np.max(medutils.mri.rss(np_input, 1), axis=(1,2))
 
         def _batch_normalize(x):
             # match the shape of norm array
             return x / norm.reshape(len(norm), *[1]*len(x.shape[1:]))
 
+        # if singlecoil, remove "coil_dim"
+        if not self.multicoil:
+            np_input = np_input[:,0]
+        if not self.multicoil and 'reference' in sample:
+            sample['reference'] = sample['reference'][:,0]
+            
         sample['norm'] = norm
         sample['mask'] = np_mask.astype(np.float32)
         sample['noisy'] = _batch_normalize(np_input)[...,np.newaxis].astype(np.complex64)

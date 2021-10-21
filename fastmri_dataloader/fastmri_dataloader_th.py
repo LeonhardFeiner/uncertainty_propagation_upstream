@@ -30,7 +30,6 @@ class FastmriCartesianDataset(FastmriCartesianDatasetBase, torch.utils.data.Data
 
 class TestSingleCoilDataloader(unittest.TestCase):
     def _test(self, mode):
-        import merlinth
         import medutils
 
         path = os.path.dirname(os.path.realpath(__file__))
@@ -39,18 +38,18 @@ class TestSingleCoilDataloader(unittest.TestCase):
         if not 'test' in mode:
             inputs, outputs = ds.__getitem__(0)
             # extract inputs
-            img_np = merlinth.torch_to_complex_abs_numpy(inputs[0][:,0])
-            kspace_np = merlinth.torch_to_complex_abs_numpy(inputs[1])
-            mask_np = inputs[2].numpy()
+            img_np = inputs[0][:,0].abs().numpy()
+            kspace_np = inputs[1][:,0].abs().numpy()
+            mask_np = inputs[2][:,0].numpy()
 
             ref = outputs[0][:,0]
-            ref_np = merlinth.torch_to_complex_abs_numpy(ref)
-            medutils.visualization.imsave(medutils.visualization.plot_array(ref_np),   f'{mode}_ref.png')
+            ref_np = ref.abs().numpy()
+            medutils.visualization.imsave(medutils.visualization.plot_array(ref_np), f'{mode}_ref.png')
         else:
             inputs = ds.__getitem__(0)
             img_np = inputs['noisy'][:,0]
-            kspace_np = inputs['kspace']
-            mask_np = inputs['mask']
+            kspace_np = inputs['kspace'][:,0]
+            mask_np = inputs['mask'][:,0]
         
         kspace_np = np.fft.fftshift(kspace_np, (-2,-1))
         mask_np = np.fft.fftshift(mask_np, (-2,-1))
@@ -70,7 +69,6 @@ class TestSingleCoilDataloader(unittest.TestCase):
 
 class TestMultiCoilDataloader(unittest.TestCase):
     def _test(self, mode):
-        import merlinth
         import medutils
 
         path = os.path.dirname(os.path.realpath(__file__))
@@ -79,12 +77,12 @@ class TestMultiCoilDataloader(unittest.TestCase):
         if not 'test' in mode:
             inputs, outputs = ds.__getitem__(0)
             # extract inputs
-            img_np = merlinth.torch_to_complex_abs_numpy(inputs[0][:,0])
-            kspace_np = merlinth.torch_to_complex_abs_numpy(inputs[1])
+            img_np = inputs[0][:,0].abs().numpy()
+            kspace_np = inputs[1].abs().numpy()
             mask_np = inputs[2].numpy()
 
             ref = outputs[0][:,0]
-            ref_np = merlinth.torch_to_complex_abs_numpy(ref)
+            ref_np = ref.numpy()
             ref_np = medutils.mri.rss(ref_np, 1)
             medutils.visualization.imsave(medutils.visualization.plot_array(ref_np),   f'{mode}_ref.png')
         else:

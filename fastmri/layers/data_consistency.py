@@ -5,7 +5,7 @@ class SingleCoilProxLayer(torch.nn.Module):
     """
         Data Consistency layer from DC-CNN, apply for single coil mainly
     """
-    def __init__(self, weight_init=1, weight_scale=1.0, center_fft=True, trainable=True):
+    def __init__(self, weight_init=0.1, weight_scale=1.0, center_fft=True, trainable=True):
         """
         Args:
             lambda_init (float): Init value of data consistency block (DCB)
