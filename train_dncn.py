@@ -193,7 +193,7 @@ def train(net, device, args):
                         #'val/lr': optimizer.param_groups[0]['lr'],
                         'val/loss': val_loss,
                         'val/in_out_gnd': wandb.Image(log_im.float().cpu()),
-                       'val/step': idx,
+                        'val/step': idx,
                         #'val/epoch': epoch,
                         **histograms
                     }, commit=False)
