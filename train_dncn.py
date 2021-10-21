@@ -86,9 +86,12 @@ def train(net, device, args):
                                   lr=args.lr, amp=args.amp))
     experiment.define_metric("train/*", step_metric="train/step")
     experiment.define_metric("val/*", step_metric="val/step")
+    
+    total_params = sum(p.numel() for p in net.parameters() if p.requires_grad)
 
     logging.info(
         f'''Starting training:
+        Num_Params:      {total_params}
         Epochs:          {args.epochs}
         Batch size:      {config['batch_size']}
         Learning rate:   {args.lr}
@@ -99,7 +102,6 @@ def train(net, device, args):
         Mixed Precision: {args.amp}
     ''')
 
-    #TODO logging info num parameters
     #TODO check loss?
     #TODO compute averaged epoch loss
     #TODO track psnr / ssim
