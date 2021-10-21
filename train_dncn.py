@@ -52,6 +52,7 @@ def get_args():
     #parser.add_argument("--accelerations", default=[4], type=int)
     #parser.add_argument("--batch_size", default=1, type=int)
     parser.add_argument("--num_workers", default=4, type=str)
+    parser.add_argument("--regularizer", default='Real2chCNN', type=str)
 
     return parser.parse_args()
 
@@ -214,7 +215,7 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Using device {device}')
 
-    net = DnCn()
+    net = DnCn(regularizer=args.regularizer)
     # net = DnCnComplexDP()
     logging.info(f'Network initialized!')
     

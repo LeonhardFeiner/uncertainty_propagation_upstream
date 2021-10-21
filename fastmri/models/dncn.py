@@ -8,6 +8,7 @@ import numpy as np
 from fastmri.layers.fft import fft2c, ifft2c
 from fastmri.layers.data_consistency import SingleCoilProxLayer
 from fastmri.models.cnn import Real2chCNN
+from fastmri.models.didn import Real2ChDIDN
 
 class DnCn(nn.Module):
     def __init__(self, input_dim=1, nc=10, nd=5, nf=64, ks=3, activation='relu', regularizer='Real2chCNN'):
@@ -19,8 +20,13 @@ class DnCn(nn.Module):
         
         for i in range(nc):
             # self.conv_blocks.append(ConvBlock(nd, input_dim, nf, ks, activation))
-            conv_blocks.append(Real2chCNN(input_dim=input_dim,filters=nf,num_layer=nd,activation=activation, use_bias=False))
-
+            if regularizer == 'Real2chCNN':
+                conv_blocks.append(Real2chCNN(input_dim=input_dim, filters=nf, num_layer=nd, activation=activation, use_bias=False))
+            elif regularizer == 'Real2chDIDN':#in_chans, out_chans, num_chans=64,pad_data=True, n_res_blocks=6)
+                conv_blocks.append(Real2ChDIDN(in_chans=input_dim, out_chans=input_dim, num_chans=nf, 
+                                   pad_data=True, n_res_blocks=nd))
+            else:
+                raise NotImplementedError
 
             dcs.append(SingleCoilProxLayer(center_fft=False))
         
