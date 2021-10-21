@@ -103,7 +103,6 @@ def train(net, device, args):
     ''')
 
     #TODO check loss?
-    #TODO compute averaged epoch loss
     #TODO track psnr / ssim
     #TODO add UNET
     #TODO add param constraints, especially for lambda!
@@ -156,7 +155,8 @@ def train(net, device, args):
 
                 pbar.update(x0.shape[0])
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
-            
+            avg_epoch_loss = epoch_loss / n_train * REAL_BATCH_SIZE
+            logging.info('Avg Loss of Epoch {}: {}'.format(epoch, avg_epoch_loss))
 
         # evaluation
         histograms = {}
