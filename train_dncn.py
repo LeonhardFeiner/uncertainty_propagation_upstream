@@ -128,9 +128,10 @@ def train(net, device, args):
                 global_step += 1
                 epoch_loss += loss.item()
 
-                log_input_im = torch.flipud(x0[0].abs())
-                log_output_im = torch.flipud(output[0].abs())
-                log_gnd_im = torch.flipud(gnd[0].abs())
+                log_input_im = x0[0].abs().flip(1)
+                log_output_im = output[0].abs().flip(1)
+                log_gnd_im = gnd[0].abs().flip(1)
+
                 log_im = torch.cat([log_input_im, log_output_im, log_gnd_im], dim=1) / log_gnd_im.max()
                 log_im = torch.clamp_max(log_im, 1)
                 #log_im = log_gnd_im / log_gnd_im.max()
@@ -180,9 +181,9 @@ def train(net, device, args):
 
                     # logging.info('Validation {}/{} loss: {}'.format(idx, ceil(n_val / args.batch_size), val_loss))
 
-                    log_input_im = torch.flipud(x0[0].abs())
-                    log_output_im = torch.flipud(output[0].abs())
-                    log_gnd_im = torch.flipud(gnd[0].abs())
+                    log_input_im = x0[0].abs().flip(1)
+                    log_output_im = output[0].abs().flip(1)
+                    log_gnd_im = gnd[0].abs().flip(1)
                     log_im = torch.cat([log_input_im, log_output_im, log_gnd_im], dim=1) / log_gnd_im.max()
                     log_im = torch.clamp_max(log_im, 1)
 
@@ -190,7 +191,7 @@ def train(net, device, args):
                         #'val/lr': optimizer.param_groups[0]['lr'],
                         'val/loss': val_loss,
                         'val/in_out_gnd': wandb.Image(log_im.float().cpu()),
-                        'val/step': idx,
+                       'val/step': idx,
                         #'val/epoch': epoch,
                         **histograms
                     }, commit=False)

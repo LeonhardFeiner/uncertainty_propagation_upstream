@@ -27,7 +27,6 @@ class DnCn(nn.Module):
                                    pad_data=True, n_res_blocks=nd))
             else:
                 raise NotImplementedError
-
             dcs.append(SingleCoilProxLayer(center_fft=False))
         
         self.conv_blocks = nn.ModuleList(conv_blocks)
