@@ -10,7 +10,7 @@ from fastmri.layers.data_consistency import SingleCoilProxLayer
 from fastmri.models.cnn import Real2chCNN
 
 class DnCn(nn.Module):
-    def __init__(self, input_dim=1, nc=5, nd=5, nf=64, ks=3, activation='relu'):
+    def __init__(self, input_dim=1, nc=10, nd=5, nf=64, ks=3, activation='relu', regularizer='Real2chCNN'):
         super(DnCn, self).__init__()
         self.nc = nc 
         self.nd = nd
@@ -18,7 +18,6 @@ class DnCn(nn.Module):
         dcs = []
         
         for i in range(nc):
-            # self.conv_blocks.append(ConvBlock(nd, input_dim, nf, ks, activation))
             conv_blocks.append(Real2chCNN(input_dim=input_dim,filters=nf,num_layer=nd,activation=activation))
             dcs.append(SingleCoilProxLayer(center_fft=False))
         
@@ -31,16 +30,13 @@ class DnCn(nn.Module):
         k: sampled kspace, [nb, 2, nx, ny], dtype=torch.complex64
         mask: sampling mask, [nb, 1, nx, ny], dtype=bool
         """
-        x = torch.view_as_real(x)
-        k = torch.view_as_real(k)
         
         for i in range(self.nc):
-            
             x_cnn = self.conv_blocks[i](x)
             x += x_cnn
             x = self.dcs[i](x, k, m)
 
-        return torch.view_as_complex(x)
+        return x
 
     
 class ConvBlock(nn.Module):

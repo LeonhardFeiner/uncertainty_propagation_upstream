@@ -131,6 +131,7 @@ class FastmriCartesianDatasetBase(object):
             np_kspace = np_kspace[:, :, np.newaxis]
             split_str = 'multicoil'
         else:
+            np_kspace = np_kspace[:, np.newaxis]
             split_str = 'singlecoil'
 
         sample = {
