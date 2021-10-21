@@ -18,7 +18,8 @@ class DnCn(nn.Module):
         dcs = []
         
         for i in range(nc):
-            conv_blocks.append(Real2chCNN(input_dim=input_dim,filters=nf,num_layer=nd,activation=activation))
+            # self.conv_blocks.append(ConvBlock(nd, input_dim, nf, ks, activation))
+            conv_blocks.append(Real2chCNN(input_dim=input_dim,filters=nf,num_layer=nd,activation=activation, use_bias=False))
             dcs.append(SingleCoilProxLayer(center_fft=False))
         
         self.conv_blocks = nn.ModuleList(conv_blocks)

@@ -1,7 +1,7 @@
 BaseExperiment: &defaults
     seed: 42
     #root_dir: !ENV ${FASTMRI_ROOT}
-    root_dir: /labspace/data/public/fastmri/
+    root_dir: /home/wenqi/Data/FastMRI/
     batch_size: 8
     singlecoil_train_ds:
         csv_file: ./datasets/fastmri_singlecoil_knee_train.csv
