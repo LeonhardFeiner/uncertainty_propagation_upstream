@@ -28,7 +28,7 @@ class SCell(nn.Module):
         self.conv_block = CNNLayer(n_f=n_f)
         self.learn_step = learn_step
         self.is_last = is_last
-        if learn_step:
+        if learn_step and not is_last:
             self._gamma = torch.nn.Parameter(torch.Tensor(1))
             self._gamma.data = torch.tensor(weight_init, dtype=self._gamma.dtype)
         
