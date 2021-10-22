@@ -114,8 +114,8 @@ class FastmriCartesianDatasetBase(object):
                 np_kspace = np_kspace[:]  # faster than smart indexing
             else:
                 np_kspace = np_kspace[slidx]
-            np_kspace = merlinpy.utils.np_ensure_complex(np_kspace)
-            np_kspace_bg = merlinpy.utils.np_ensure_complex(data['kspace'][0])
+            np_kspace = merlinpy.utils.np_ensure_complex64(np_kspace)
+            np_kspace_bg = merlinpy.utils.np_ensure_complex64(data['kspace'][0])
 
             # load extra metadata for test data
             np_line = np_acc = np_acl = None
