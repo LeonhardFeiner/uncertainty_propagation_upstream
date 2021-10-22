@@ -7,6 +7,8 @@ from numpy import ceil
 import fastmri_dataloader
 from fastmri_dataloader.fastmri_dataloader_th import FastmriCartesianDataset
 from fastmri.models.dncn import DnCn
+import fastmri.losses
+import fastmri.functional as F_fastmri
 
 from torch.utils.data import DataLoader, dataloader
 import torch.optim as optim
@@ -74,7 +76,7 @@ def train(net, device, args):
     optimizer = optim.Adam(net.parameters(), lr=args.lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', factor=0.5)
     grad_scaler = torch.cuda.amp.GradScaler(enabled=args.amp)
-    criterion = nn.L1Loss()
+    criterion = fastmri.losses.MaskedL1Loss()
 
     global_step = 0
 
@@ -102,7 +104,6 @@ def train(net, device, args):
         Mixed Precision: {args.amp}
     ''')
 
-    #TODO check loss?
     #TODO track psnr / ssim
     #TODO add UNET
     #TODO add param constraints, especially for lambda!
@@ -122,8 +123,7 @@ def train(net, device, args):
 
                 with torch.cuda.amp.autocast(enabled=args.amp):
                     output = net(*inputs[:-1]) # pass all inputs except fg_mask
-                    #TODO re-write criterion. We need to apply fg mask and device by the number of fg_pixels, for each entry in batch
-                    loss = criterion(output.abs(), gnd.abs())
+                    loss = criterion(output.abs(), gnd.abs(), fg_mask)
                 
                 optimizer.zero_grad(set_to_none=True)
                 grad_scaler.scale(loss).backward()
@@ -187,8 +187,7 @@ def train(net, device, args):
                     gnd = outputs[0]
 
                     output = net(*inputs[:-1])
-                    #TODO re-write criterion. We need to apply fg mask and device by the number of fg_pixels, for each entry in batch
-                    val_loss = F.l1_loss(output.abs(), gnd.abs())
+                    val_loss = F_fastmri.masked_l1_loss(output.abs(), gnd.abs(), fg_mask)
 
                     # logging.info('Validation {}/{} loss: {}'.format(idx, ceil(n_val / args.batch_size), val_loss))
 

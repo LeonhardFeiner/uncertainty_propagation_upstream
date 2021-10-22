@@ -337,7 +337,7 @@ class LoadCoilSensitivities():
             # use only num_smaps set of espirit coil sensitivity maps
        #     try:
             smaps_sl = h5_data[f"smaps_acl{acl}"]
-            smaps_sl = merlinpy.np_ensure_complex(
+            smaps_sl = merlinpy.np_ensure_complex64(
             smaps_sl[sample["slidx"][i], :, :self.num_smaps:]
         )
             # except:
@@ -353,7 +353,7 @@ class LoadCoilSensitivities():
 
             if not is_testset:
                 ref = h5_data[f"reference_acl{acl}"]
-                np_target.append(merlinpy.np_ensure_complex(
+                np_target.append(merlinpy.np_ensure_complex64(
                     ref[sample["slidx"][i], :self.num_smaps:]
                 ))
                     # np_max.append(
@@ -395,7 +395,7 @@ class LoadForegroundMask():
             'r',
         )
 
-        sample['fg_mask'] = h5_data['foreground'][sample["slidx"]][:,None]
+        sample['fg_mask'] = merlinpy.np_ensure_float32(h5_data['foreground'][sample["slidx"]][:,None])
         h5_data.close()
         return sample
 
