@@ -62,11 +62,18 @@ class GeneratePatches():
         shape_reduced = list(np_kspace.shape)
         shape_reduced[-2] = patch_ny
         np_kspace_reduced = np.zeros(shape_reduced, dtype=np.complex64)
+
+        is_fg_mask = True if 'fg_mask' in sample else False
         if self.multicoil:
             np_smaps = sample['smaps']
             smaps_shape_reduced = list(np_smaps.shape)
             smaps_shape_reduced[-2] = patch_ny
             np_smaps_reduced = np.zeros(smaps_shape_reduced, dtype=np.complex64)
+        if is_fg_mask:
+            np_fg_mask = sample['fg_mask']
+            fg_mask_shape_reduced = list(np_fg_mask.shape)
+            fg_mask_shape_reduced[-2] = patch_ny
+            np_fg_mask_reduced = np.zeros(fg_mask_shape_reduced, dtype=np.float32)
 
         for i in range(np_kspace.shape[0]):
             start_idx = np.random.randint(offset_y, max_ny) + k_offset
@@ -79,7 +86,10 @@ class GeneratePatches():
             np_kspace_reduced[i] = medutils.mri.fft2c(np_img[..., start:end, :])
 
             if self.multicoil:
-                np_smaps_reduced[i] = np_smaps[0, ..., start:end, :]
+                np_smaps_reduced[i] = np_smaps[i, ..., start:end, :]
+
+            if is_fg_mask:
+                np_fg_mask_reduced[i] = np_fg_mask[i, ..., start:end, :]
 
         # create new adjoint
         if self.multicoil:  
@@ -97,6 +107,8 @@ class GeneratePatches():
         sample['mask'] = np_mask
         if self.multicoil:
             sample['smaps'] = np_smaps_reduced
+        if is_fg_mask:
+            sample['fg_mask'] = np_fg_mask_reduced
 
         return sample
 
@@ -371,6 +383,22 @@ class LoadCoilSensitivities():
 
         return sample
 
+class LoadForegroundMask():
+    def __init__(self, fg_dir):
+        assert isinstance(fg_dir, (str))
+        self.fg_dir = fg_dir
+
+    def __call__(self, sample):
+        fname = sample["fname"].split('/')[-1]
+        h5_data = h5py.File(
+            os.path.join(sample['rootdir'], self.fg_dir, fname),
+            'r',
+        )
+
+        sample['fg_mask'] = h5_data['foreground'][sample["slidx"]][:,None]
+        h5_data.close()
+        return sample
+
 def get_keras_transform(mode, config):
     from merlintf.keras.utils import ToKerasIO
     if mode == 'singlecoil_train':
@@ -406,25 +434,28 @@ def get_torch_transform(mode, config):
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
                                                         accelerations=config['accelerations'],
                                                         is_train=True),
+                    LoadForegroundMask(config[f'{mode}_ds']['fg_dir']),
                     GeneratePatches(**config[f'{mode}_ds']['patch'], multicoil=False),
                     ComputeInit(multicoil=False),
                     Transpose([('noisy', (0, 3, 1, 2)), ('reference',  (0, 3, 1, 2))]),
-                    ToTorchIO(['noisy', 'kspace', 'mask'], ['reference'])
+                    ToTorchIO(['noisy', 'kspace', 'mask', 'fg_mask'], ['reference'])
                     ]
     elif mode == 'singlecoil_val':
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
                                                         accelerations=config['accelerations'],
                                                         is_train=False),
+                    LoadForegroundMask(config[f'{mode}_ds']['fg_dir']),
                     GeneratePatches(**config[f'{mode}_ds']['patch'], multicoil=False),
                     ComputeInit(multicoil=False),
                     Transpose([('noisy', (0, 3, 1, 2)), ('reference',  (0, 3, 1, 2))]),
-                    ToTorchIO(['noisy', 'kspace', 'mask'], ['reference'])
+                    ToTorchIO(['noisy', 'kspace', 'mask', 'fg_mask'], ['reference'])
                     ]
 
     elif mode == 'singlecoil_test':
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
                                                         accelerations=config['accelerations'],
                                                         is_train=False),
+                    LoadForegroundMask(config[f'{mode}_ds']['fg_dir']),
                     ComputeInit(multicoil=False),
                     Transpose([('noisy', (0, 3, 1, 2))]),
                     ]
@@ -433,25 +464,28 @@ def get_torch_transform(mode, config):
                                                         accelerations=config['accelerations'],
                                                         is_train=True),
                     LoadCoilSensitivities(config[f'{mode}_ds']['sens_dir'], num_smaps=config['num_smaps']),
-                    GeneratePatches(**config[f'{mode}_ds']['patch'], multicoil=True),
                     ComputeInit(multicoil=True),
+                    GeneratePatches(**config[f'{mode}_ds']['patch'], multicoil=True),
+                    LoadForegroundMask(config[f'{mode}_ds']['fg_dir']),
                     Transpose([('noisy', (0, 4, 1, 3, 2)), ('reference',  (0, 4, 1, 3, 2))]),
-                    ToTorchIO(['noisy', 'kspace', 'mask', 'smaps'], ['reference'])
+                    ToTorchIO(['noisy', 'kspace', 'mask', 'smaps', 'fg_mask'], ['reference'])
                     ]
     elif mode == 'multicoil_val':
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
                                                         accelerations=config['accelerations'],
                                                         is_train=True),
                     LoadCoilSensitivities(config[f'{mode}_ds']['sens_dir'], num_smaps=config['num_smaps']),
+                    LoadForegroundMask(config[f'{mode}_ds']['fg_dir']),
                     ComputeInit(multicoil=True),
                     Transpose([('noisy', (0, 4, 1, 3, 2)), ('reference',  (0, 4, 1, 3, 2))]),
-                    ToTorchIO(['noisy', 'kspace', 'mask', 'smaps'], ['reference'])
+                    ToTorchIO(['noisy', 'kspace', 'mask', 'smaps', 'fg_mask'], ['reference'])
                     ]
     elif mode == 'multicoil_test':
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
                                                         accelerations=config['accelerations'],
                                                         is_train=True),
                     LoadCoilSensitivities(config[f'{mode}_ds']['sens_dir'], num_smaps=config['num_smaps']),
+                    LoadForegroundMask(config[f'{mode}_ds']['fg_dir']),
                     ComputeInit(multicoil=True),
                     Transpose([('noisy', (0, 4, 1, 3, 2))]),
                     ]

@@ -41,6 +41,7 @@ class TestSingleCoilDataloader(unittest.TestCase):
             img_np = inputs[0][:,0].abs().numpy()
             kspace_np = inputs[1][:,0].abs().numpy()
             mask_np = inputs[2][:,0].numpy()
+            fg_mask_np = inputs[3][:,0].numpy()
 
             ref = outputs[0][:,0]
             ref_np = ref.abs().numpy()
@@ -50,13 +51,15 @@ class TestSingleCoilDataloader(unittest.TestCase):
             img_np = inputs['noisy'][:,0]
             kspace_np = inputs['kspace'][:,0]
             mask_np = inputs['mask'][:,0]
-        
+            fg_mask_np = inputs['fg_mask'][:,0]
+
         kspace_np = np.fft.fftshift(kspace_np, (-2,-1))
         mask_np = np.fft.fftshift(mask_np, (-2,-1))
 
         medutils.visualization.imsave(medutils.visualization.plot_array(img_np),   f'{mode}_img.png')
         medutils.visualization.ksave(medutils.visualization.plot_array(kspace_np), f'{mode}_kspace.png')
         medutils.visualization.imsave(medutils.visualization.plot_array(mask_np),  f'{mode}_mask.png')
+        medutils.visualization.imsave(medutils.visualization.plot_array(fg_mask_np),  f'{mode}_fg.png')
 
     def testSinglecoilTrain(self):
         self._test('singlecoil_train')
@@ -80,6 +83,7 @@ class TestMultiCoilDataloader(unittest.TestCase):
             img_np = inputs[0][:,0].abs().numpy()
             kspace_np = inputs[1].abs().numpy()
             mask_np = inputs[2].numpy()
+            fg_mask_np = inputs[4][:,0].numpy()
 
             ref = outputs[0][:,0]
             ref_np = ref.numpy()
@@ -90,6 +94,7 @@ class TestMultiCoilDataloader(unittest.TestCase):
             img_np = inputs['noisy'][:,0]
             kspace_np = inputs['kspace']
             mask_np = inputs['mask']
+            fg_mask_np = inputs['fg_mask'][:,0]
         
         kspace_np = np.fft.fftshift(kspace_np, (-2,-1))[:,0,0]
         mask_np = np.fft.fftshift(mask_np, (-2,-1))[:,0,0]
@@ -99,6 +104,7 @@ class TestMultiCoilDataloader(unittest.TestCase):
         medutils.visualization.imsave(medutils.visualization.plot_array(img_np),   f'{mode}_img.png')
         medutils.visualization.ksave(medutils.visualization.plot_array(kspace_np), f'{mode}_kspace.png')
         medutils.visualization.imsave(medutils.visualization.plot_array(mask_np),  f'{mode}_mask.png')
+        medutils.visualization.imsave(medutils.visualization.plot_array(fg_mask_np),  f'{mode}_fg.png')
 
     def testMulticoilTrain(self):
         self._test('multicoil_train')

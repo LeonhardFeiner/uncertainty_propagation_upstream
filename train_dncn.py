@@ -106,6 +106,7 @@ def train(net, device, args):
     #TODO track psnr / ssim
     #TODO add UNET
     #TODO add param constraints, especially for lambda!
+    #TODO write RSS function
 
     for epoch in range(args.epochs):
         net.train()
@@ -116,10 +117,12 @@ def train(net, device, args):
                 inputs, outputs = fastmri_dataloader.prepare_batch(batch, device)
 
                 x0 = inputs[0]
+                fg_mask = inputs[-1]
                 gnd = outputs[0]
 
                 with torch.cuda.amp.autocast(enabled=args.amp):
-                    output = net(*inputs)
+                    output = net(*inputs[:-1]) # pass all inputs except fg_mask
+                    #TODO re-write criterion. We need to apply fg mask and device by the number of fg_pixels, for each entry in batch
                     loss = criterion(output.abs(), gnd.abs())
                 
                 optimizer.zero_grad(set_to_none=True)
@@ -132,8 +135,12 @@ def train(net, device, args):
                 log_input_im = x0[0].abs().flip(1)
                 log_output_im = output[0].abs().flip(1)
                 log_gnd_im = gnd[0].abs().flip(1)
+                log_fg_mask_im = fg_mask[0].flip(1)
 
-                log_im = torch.cat([log_input_im, log_output_im, log_gnd_im], dim=1) / log_gnd_im.max()
+                log_im = torch.cat([log_input_im * log_fg_mask_im,
+                                    log_output_im * log_fg_mask_im,
+                                    log_gnd_im * log_fg_mask_im,
+                                    ], dim=1) / log_gnd_im.max()
                 log_im = torch.clamp_max(log_im, 1)
                 #log_im = log_gnd_im / log_gnd_im.max()
                 
@@ -176,9 +183,11 @@ def train(net, device, args):
                     inputs, outputs = fastmri_dataloader.prepare_batch(batch, device)
 
                     x0 = inputs[0]
+                    fg_mask = inputs[-1]
                     gnd = outputs[0]
 
-                    output = net(*inputs)
+                    output = net(*inputs[:-1])
+                    #TODO re-write criterion. We need to apply fg mask and device by the number of fg_pixels, for each entry in batch
                     val_loss = F.l1_loss(output.abs(), gnd.abs())
 
                     # logging.info('Validation {}/{} loss: {}'.format(idx, ceil(n_val / args.batch_size), val_loss))
@@ -186,7 +195,12 @@ def train(net, device, args):
                     log_input_im = x0[0].abs().flip(1)
                     log_output_im = output[0].abs().flip(1)
                     log_gnd_im = gnd[0].abs().flip(1)
-                    log_im = torch.cat([log_input_im, log_output_im, log_gnd_im], dim=1) / log_gnd_im.max()
+                    log_fg_mask_im = fg_mask[0].flip(1)
+
+                    log_im = torch.cat([log_input_im * log_fg_mask_im,
+                                        log_output_im * log_fg_mask_im,
+                                        log_gnd_im * log_fg_mask_im
+                                        ], dim=1) / log_gnd_im.max()
                     log_im = torch.clamp_max(log_im, 1)
 
                     experiment.log({

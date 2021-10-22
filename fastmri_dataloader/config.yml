@@ -1,10 +1,12 @@
 BaseExperiment: &defaults
     seed: 42
     #root_dir: !ENV ${FASTMRI_ROOT}
-    root_dir: /home/wenqi/Data/FastMRI/
+    # root_dir: /home/wenqi/Data/FastMRI/
+    root_dir: /labspace/data/public/fastmri
     batch_size: 8
     singlecoil_train_ds:
         csv_file: ./datasets/fastmri_singlecoil_knee_train.csv
+        fg_dir: singlecoil_train_foreground
         full: False
         slices:
             min: 8
@@ -14,6 +16,7 @@ BaseExperiment: &defaults
             remove_feos: True
     singlecoil_val_ds:
         csv_file: ./datasets/fastmri_singlecoil_knee_val.csv
+        fg_dir: singlecoil_val_foreground
         full: False
         slices:
             min: 12
@@ -24,9 +27,11 @@ BaseExperiment: &defaults
             remove_feos: True
     singlecoil_test_ds:
         csv_file: ./datasets/fastmri_singlecoil_knee_val.csv
+        fg_dir: singlecoil_val_foreground
     multicoil_train_ds:
         csv_file: ./datasets/fastmri_multicoil_knee_train.csv
         sens_dir: multicoil_train_espirit
+        fg_dir: multicoil_train_foreground
         full: False
         slices:
             min: 8
@@ -37,6 +42,7 @@ BaseExperiment: &defaults
     multicoil_val_ds:
         csv_file: ./datasets/fastmri_multicoil_knee_val.csv
         sens_dir: multicoil_val_espirit
+        fg_dir: multicoil_val_foreground
         full: False
         slices:
             min: 12
@@ -48,6 +54,7 @@ BaseExperiment: &defaults
     multicoil_test_ds:
         csv_file: ./datasets/fastmri_multicoil_knee_val.csv
         sens_dir: multicoil_val_espirit
+        fg_dir: multicoil_val_foreground
     data_filter:
         acquisition:
             - CORPD_FBK
