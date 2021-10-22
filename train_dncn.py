@@ -7,6 +7,7 @@ from numpy import ceil
 import fastmri_dataloader
 from fastmri_dataloader.fastmri_dataloader_th import FastmriCartesianDataset
 from fastmri.models.dncn import DnCn
+from fastmri.models.unet import Unet
 import fastmri.losses
 import fastmri.functional as F_fastmri
 
@@ -39,6 +40,7 @@ def get_args():
     parser = ArgumentParser()
 
     # training related
+    parser.add_argument("--model", default='dncn', type=str)
     parser.add_argument("--lr", default=0.001, type=float)
     parser.add_argument("--epochs", default=50, type=int)
     parser.add_argument("--amp", default=False)
@@ -230,8 +232,13 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(message)s')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Using device {device}')
-
-    net = DnCn(regularizer=args.regularizer)
+    
+    if args.model == 'dncn':
+        net = DnCn(regularizer=args.regularizer)
+    elif args.model == 'unet':
+        net = Unet(in_chans=2, out_chans=2, chans=32, num_pool_layers=4)
+    elif args.model == 'snet':
+        raise NotImplemented
     # net = DnCnComplexDP()
     logging.info(f'Network initialized!')
     

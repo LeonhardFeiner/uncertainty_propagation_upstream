@@ -5,6 +5,7 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
+import merlinth
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -66,7 +67,7 @@ class Unet(nn.Module):
             )
         )
 
-    def forward(self, image: torch.Tensor) -> torch.Tensor:
+    def forward(self, image: torch.Tensor, *args) -> torch.Tensor:
         """
         Args:
             image: Input 4D tensor of shape `(N, in_chans, H, W)`.
@@ -74,6 +75,7 @@ class Unet(nn.Module):
         Returns:
             Output tensor of shape `(N, out_chans, H, W)`.
         """
+        image = merlinth.complex2real(image)
         stack = []
         output = image
 
@@ -102,7 +104,7 @@ class Unet(nn.Module):
             output = torch.cat([output, downsample_layer], dim=1)
             output = conv(output)
 
-        return output
+        return merlinth.real2complex(output)
 
 
 class ConvBlock(nn.Module):
