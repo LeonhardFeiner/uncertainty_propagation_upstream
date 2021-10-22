@@ -8,6 +8,7 @@ import fastmri_dataloader
 from fastmri_dataloader.fastmri_dataloader_th import FastmriCartesianDataset
 from fastmri.models.dncn import DnCn
 from fastmri.models.unet import Unet
+from fastmri.models.snet import Snet
 import fastmri.losses
 import fastmri.functional as F_fastmri
 
@@ -107,7 +108,6 @@ def train(net, device, args):
     ''')
 
     #TODO track psnr / ssim
-    #TODO add UNET
     #TODO add param constraints, especially for lambda!
     #TODO write RSS function
 
@@ -238,7 +238,7 @@ if __name__ == '__main__':
     elif args.model == 'unet':
         net = Unet(in_chans=2, out_chans=2, chans=32, num_pool_layers=4)
     elif args.model == 'snet':
-        raise NotImplemented
+        net = Snet(n_blcoks=10, input_dim=2, n_f=64)
     # net = DnCnComplexDP()
     logging.info(f'Network initialized!')
     
