@@ -43,7 +43,7 @@ def get_args():
     # training related
     parser.add_argument("--model", default='dncn', type=str)
     parser.add_argument("--lr", default=0.001, type=float)
-    parser.add_argument("--epochs", default=50, type=int)
+    parser.add_argument("--epochs", default=100, type=int)
     parser.add_argument("--amp", default=False)
     parser.add_argument("--save_checkpoint", default=False)
     parser.add_argument("--load", default=None)
@@ -56,8 +56,11 @@ def get_args():
     #parser.add_argument("--center_fractions", default=[0.08], type=float)
     #parser.add_argument("--accelerations", default=[4], type=int)
     #parser.add_argument("--batch_size", default=1, type=int)
-    parser.add_argument("--num_workers", default=4, type=str)
+    parser.add_argument("--num_workers", default=8, type=str)
     parser.add_argument("--regularizer", default='Real2chCNN', type=str)
+    parser.add_argument("--shared-params", action='store_true', help='Sharing paramters over cascades')
+    parser.add_argument("--nc", type=int, default=10, help='Number of cascades')
+    parser.add_argument("--nf", type=int, default=64, help='Num base features')
 
     return parser.parse_args()
 
@@ -108,8 +111,9 @@ def train(net, device, args):
     ''')
 
     #TODO track psnr / ssim
-    #TODO add param constraints, especially for lambda!
-    #TODO write RSS function
+    #TODO write RSS function (multicoil)
+    #TODO didn needs lower learning rate trying with 2e-4
+    #TODO checkpoint path with experiment ID
 
     for epoch in range(args.epochs):
         net.train()
@@ -130,6 +134,11 @@ def train(net, device, args):
                 optimizer.zero_grad(set_to_none=True)
                 grad_scaler.scale(loss).backward()
                 grad_scaler.step(optimizer)
+
+                # apply hard constraints
+                for p in net.parameters():
+                    if p.requires_grad and hasattr(p, 'proj'):
+                        p.proj()
 
                 global_step += 1
                 epoch_loss += loss.item()
@@ -204,19 +213,20 @@ def train(net, device, args):
                                         ], dim=1) / log_gnd_im.max()
                     log_im = torch.clamp_max(log_im, 1)
 
-                    experiment.log({
-                        #'val/lr': optimizer.param_groups[0]['lr'],
-                        'val/loss': val_loss,
-                        'val/in_out_gnd': wandb.Image(log_im.float().cpu()),
-                        'val/step': idx,
-                        #'val/epoch': epoch,
-                        **histograms
-                    }, commit=False)
-                    val_score += val_loss
+                    val_score += val_loss / len(val_dataloader)
                     pbar_val.update(x0.shape[0])
                     pbar_val.set_postfix(**{'loss (batch)': val_loss.item()})
 
-                scheduler.step(val_score)
+            experiment.log({
+                #'val/lr': optimizer.param_groups[0]['lr'],
+                'val/loss': val_score,
+                'val/in_out_gnd': wandb.Image(log_im.float().cpu()),
+                'val/step': global_step,
+                #'val/epoch': epoch,
+                **histograms
+            })
+
+            scheduler.step(val_score)
 
 
 
@@ -232,15 +242,16 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(message)s')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Using device {device}')
-    
+    logging.info(args)
     if args.model == 'dncn':
-        net = DnCn(regularizer=args.regularizer)
+        net = DnCn(regularizer=args.regularizer, shared_params=args.shared_params, nc=args.nc, nf=args.nf)
     elif args.model == 'unet':
         net = Unet(in_chans=2, out_chans=2, chans=32, num_pool_layers=4)
     elif args.model == 'snet':
-        net = Snet(n_blcoks=10, input_dim=2, n_f=64)
+        net = Snet(n_blocks=10, input_dim=2, n_f=64)
     # net = DnCnComplexDP()
     logging.info(f'Network initialized!')
+    logging.info(net)
     
     if args.load:
         net.load_state_dict(torch.load(args.load, map_location=device))

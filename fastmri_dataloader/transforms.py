@@ -112,7 +112,8 @@ class GeneratePatches():
 
         return sample
 
-
+#TODO SetupRandomFastMRIChallengeMask
+#TODO GenerateCartesianMask:
 class GenerateRandomFastMRIChallengeMask:
     """
     [Code from https://github.com/facebookresearch/fastMRI]

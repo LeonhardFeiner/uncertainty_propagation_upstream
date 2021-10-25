@@ -11,7 +11,7 @@ BaseExperiment: &defaults
         slices:
             min: 8
         patch:
-            patch_ny: 96
+            patch_ny: 128
             offset_y: 0
             remove_feos: True
     singlecoil_val_ds:

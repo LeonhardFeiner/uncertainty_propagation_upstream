@@ -55,10 +55,10 @@ class SCell(nn.Module):
 
 
 class Snet(nn.Module):
-    def __init__(self, n_blcoks=10, input_dim=2, n_f=64, activation='lrelu', learn_step=True):
+    def __init__(self, n_blocks=10, input_dim=2, n_f=64, activation='lrelu', learn_step=True):
         super(Snet, self).__init__()
-        self.n_blocks = n_blcoks
-        layers = [SCell(n_f=n_f, learn_step=learn_step) for i in range(n_blcoks-1)]
+        self.n_blocks = n_blocks
+        layers = [SCell(n_f=n_f, learn_step=learn_step) for i in range(n_blocks-1)]
         layers.append(SCell(n_f=n_f, learn_step=learn_step, is_last=True))
         #self.seq = nn.Sequential(*layers)
         self.layers = nn.ModuleList(layers)

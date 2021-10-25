@@ -13,6 +13,7 @@ class SingleCoilProxLayer(torch.nn.Module):
         super(SingleCoilProxLayer, self).__init__()
         self._weight = torch.nn.Parameter(torch.Tensor(1))
         self._weight.data = torch.tensor(weight_init, dtype=self._weight.dtype)
+        self._weight.proj = lambda: self._weight.data.clamp_(0, 1 / weight_scale)
         self.weight_scale = weight_scale
 
         self.trainable = trainable

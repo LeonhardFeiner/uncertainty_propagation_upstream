@@ -11,14 +11,16 @@ from fastmri.models.cnn import Real2chCNN
 from fastmri.models.didn import Real2ChDIDN
 
 class DnCn(nn.Module):
-    def __init__(self, input_dim=1, nc=10, nd=5, nf=64, ks=3, activation='relu', regularizer='Real2chCNN'):
+    def __init__(self, input_dim=1, nc=10, nd=5, nf=64, ks=3, activation='relu', regularizer='Real2chCNN', shared_params=False):
         super(DnCn, self).__init__()
-        self.nc = nc 
+        self.nc = 1 if shared_params else nc
         self.nd = nd
         conv_blocks = []
         dcs = []
+        self.nc_end = nc
+        self.shared_params = shared_params
         
-        for i in range(nc):
+        for _ in range(self.nc):
             # self.conv_blocks.append(ConvBlock(nd, input_dim, nf, ks, activation))
             if regularizer == 'Real2chCNN':
                 conv_blocks.append(Real2chCNN(input_dim=input_dim, filters=nf, num_layer=nd, activation=activation, use_bias=False))
@@ -39,10 +41,10 @@ class DnCn(nn.Module):
         mask: sampling mask, [nb, 1, nx, ny], dtype=bool
         """
         
-        for i in range(self.nc):
-            x_cnn = self.conv_blocks[i](x)
+        for i in range(self.nc_end):
+            x_cnn = self.conv_blocks[i%self.nc](x)
             x += x_cnn
-            x = self.dcs[i](x, k, m)
+            x = self.dcs[i%self.nc](x, k, m)
 
         return x
 
