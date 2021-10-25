@@ -20,6 +20,7 @@ from argparse import ArgumentParser
 import wandb
 import logging
 from tqdm import tqdm
+from datetime import datetime
 
 # def collate_fn_crop(batch):
 #     '''
@@ -45,7 +46,7 @@ def get_args():
     parser.add_argument("--lr", default=0.001, type=float)
     parser.add_argument("--epochs", default=100, type=int)
     parser.add_argument("--amp", default=False)
-    parser.add_argument("--save_checkpoint", default=False)
+    parser.add_argument("--save_checkpoint", default=False, type=bool)
     parser.add_argument("--load", default=None)
 
 
@@ -76,7 +77,7 @@ def train(net, device, args):
     train_dataloader = DataLoader(train_dataset, shuffle=True, **loader_args)
     val_dataloader = DataLoader(val_dataset, shuffle=False, drop_last=True, **loader_args)
 
-    checkpoint_path = './ckpt'
+    
 
     # optimizer related
     optimizer = optim.Adam(net.parameters(), lr=args.lr)
@@ -89,9 +90,12 @@ def train(net, device, args):
     n_train = len(train_dataset) * REAL_BATCH_SIZE
     n_val = len(val_dataset) * REAL_BATCH_SIZE
 
-    experiment = wandb.init(project="dccnn-dp", reinit=False)
+    TIMESTAMP = "{0:%Y-%m-%dT%H-%M-%S}".format(datetime.now())
+    exp_id = '_'.join([TIMESTAMP, args.model])
+    experiment = wandb.init(project="dccnn-dp", reinit=False,name=exp_id, config=vars(args))
     experiment.config.update(dict(epochs=args.epochs,
                                   lr=args.lr, amp=args.amp))
+    checkpoint_path = Path('./ckpt') / exp_id
     experiment.define_metric("train/*", step_metric="train/step")
     experiment.define_metric("val/*", step_metric="val/step")
     
@@ -113,7 +117,6 @@ def train(net, device, args):
     #TODO track psnr / ssim
     #TODO write RSS function (multicoil)
     #TODO didn needs lower learning rate trying with 2e-4
-    #TODO checkpoint path with experiment ID
 
     for epoch in range(args.epochs):
         net.train()
@@ -232,6 +235,10 @@ def train(net, device, args):
 
         if args.save_checkpoint:
             Path(checkpoint_path).mkdir(parents=True, exist_ok=True)
+            if epoch == 0:
+                import json
+                with open(Path(checkpoint_path) / 'config.json', 'w') as fp:
+                    json.dump(vars(args), fp, indent=4, sort_keys=True)
             torch.save(net.state_dict(), str(checkpoint_path / 'checkpoint_epoch{}.pth'.format(epoch+1)))
             logging.info(f'Checkpoint {epoch + 1} saved!')
 
