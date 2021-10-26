@@ -36,7 +36,6 @@ from datetime import datetime
 #     mask = (batch != 0).to(device)
 #     return batch, lengths, mask
 
-REAL_BATCH_SIZE = 8
 
 def get_args():
     parser = ArgumentParser()
@@ -87,21 +86,23 @@ def train(net, device, args):
 
     global_step = 0
 
-    n_train = len(train_dataset) * REAL_BATCH_SIZE
-    n_val = len(val_dataset) * REAL_BATCH_SIZE
+    n_train = len(train_dataset) * config['batch_size']
+    n_val = len(val_dataset) * config['batch_size']
+
+    total_params = sum(p.numel() for p in net.parameters() if p.requires_grad)
 
     TIMESTAMP = "{0:%Y-%m-%dT%H-%M-%S}".format(datetime.now())
     exp_id = '_'.join([TIMESTAMP, args.model])
-    experiment = wandb.init(project="dccnn-dp", reinit=False,name=exp_id, config=vars(args))
+    expconfig = vars(args)
+    expconfig["total_params"] = total_params
+    experiment = wandb.init(project="dccnn-dp", reinit=False,name=exp_id, config=expconfig)
     experiment.config.update(dict(epochs=args.epochs,
                                   lr=args.lr, amp=args.amp))
     checkpoint_path = Path('./ckpt') / exp_id
-    experiment.define_metric("train/*", step_metric="batch")
-    experiment.define_metric("val/*", step_metric="epoch")
-    experiment.define_metric('val_images/*', step_metric='idx')
+    #experiment.define_metric("train/*", step_metric="train/batch")
+    #experiment.define_metric("val/*", step_metric="val/step")
+    #experiment.define_metric('val_images/*', step_metric='val_images/idx')
     
-    total_params = sum(p.numel() for p in net.parameters() if p.requires_grad)
-
     logging.info(
         f'''Starting training:
         Num_Params:      {total_params}
@@ -115,9 +116,11 @@ def train(net, device, args):
         Mixed Precision: {args.amp}
     ''')
 
-    #TODO track psnr / ssim
+
     #TODO write RSS function (multicoil)
     #TODO didn needs lower learning rate trying with 2e-4
+    #TODO test code
+    #TODO correct training and validation steps in wandb
 
     for epoch in range(args.epochs):
         net.train()
@@ -163,7 +166,7 @@ def train(net, device, args):
                     experiment.log({
                         'train/loss': loss.item(),
                         #'train/step': global_step,
-                        'batch': global_step,
+                        #'train/batch': global_step,
                         'train/epoch': epoch,
                         'train/in_out_gnd': wandb.Image(log_im.float().cpu()),
                         'train/lr': optimizer.param_groups[0]['lr']
@@ -172,14 +175,14 @@ def train(net, device, args):
                     experiment.log({
                         'train/loss': loss.item(),
                         #'train/step': global_step,
-                        'batch': global_step,
+                        #'train/batch': global_step,
                         'train/epoch': epoch,
                         'train/lr': optimizer.param_groups[0]['lr']
                     }, step=global_step)
 
                 pbar.update(x0.shape[0])
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
-            avg_epoch_loss = epoch_loss / n_train * REAL_BATCH_SIZE
+            avg_epoch_loss = epoch_loss / n_train * config['batch_size']
             logging.info('Avg Loss of Epoch {}: {}'.format(epoch, avg_epoch_loss))
 
         # evaluation
@@ -234,12 +237,12 @@ def train(net, device, args):
                     
                     #val_tab.add_row(wandb.Image(log_im.float().cpu()), )
 
-                    pbar_val.update(x0.shape[0])
-                    pbar_val.set_postfix(**{'loss (batch)': l1.item()})
-                    experiment.log({
-                        'val_images/results': wandb.Image(log_im.float().cpu()),
-                        'idx': idx
-                    })
+                    # pbar_val.update(x0.shape[0])
+                    # pbar_val.set_postfix(**{'loss (batch)': l1.item()})
+                    # experiment.log({
+                    #     'val_images/results': wandb.Image(log_im.float().cpu()),
+                    #     'val_imaegs/idx': idx
+                    # })
 
 
             experiment.log({
@@ -248,10 +251,11 @@ def train(net, device, args):
                 'val/nmse': val_nmse,
                 'val/psnr': val_psnr,
                 'val/ssim': val_ssim,
-                'epoch': epoch + 1,
+                'val/results': wandb.Image(log_im.float().cpu()),
+                #'trian/epoch': epoch + 1,
                 #'val/step': global_step,
                 #'val/step': epoch + 1,
-                #'val/epoch': epoch,
+                'val/epoch': epoch,
                 **histograms
             })
             val_score = val_l1
