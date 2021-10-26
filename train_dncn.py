@@ -96,8 +96,9 @@ def train(net, device, args):
     experiment.config.update(dict(epochs=args.epochs,
                                   lr=args.lr, amp=args.amp))
     checkpoint_path = Path('./ckpt') / exp_id
-    experiment.define_metric("train/*", step_metric="train/step")
-    experiment.define_metric("val/*", step_metric="val/step")
+    experiment.define_metric("train/*", step_metric="batch")
+    experiment.define_metric("val/*", step_metric="epoch")
+    experiment.define_metric('val_images/*', step_metric='idx')
     
     total_params = sum(p.numel() for p in net.parameters() if p.requires_grad)
 
@@ -125,7 +126,7 @@ def train(net, device, args):
         with tqdm(total=n_train, desc=f'Train Epoch {epoch + 1}/{args.epochs}', unit='img') as pbar:
             for batch in train_dataloader:
                 inputs, outputs = fastmri_dataloader.prepare_batch(batch, device)
-
+                
                 x0 = inputs[0]
                 fg_mask = inputs[-1]
                 gnd = outputs[0]
@@ -161,7 +162,8 @@ def train(net, device, args):
                 if global_step % 200 == 0:
                     experiment.log({
                         'train/loss': loss.item(),
-                        'train/step': global_step,
+                        #'train/step': global_step,
+                        'batch': global_step,
                         'train/epoch': epoch,
                         'train/in_out_gnd': wandb.Image(log_im.float().cpu()),
                         'train/lr': optimizer.param_groups[0]['lr']
@@ -169,7 +171,8 @@ def train(net, device, args):
                 else:
                     experiment.log({
                         'train/loss': loss.item(),
-                        'train/step': global_step,
+                        #'train/step': global_step,
+                        'batch': global_step,
                         'train/epoch': epoch,
                         'train/lr': optimizer.param_groups[0]['lr']
                     }, step=global_step)
@@ -190,8 +193,14 @@ def train(net, device, args):
         
 
         net.eval()
-        val_score = 0
+        #val_score = 0
+        val_l1 = 0
+        val_nmse = 0
+        val_psnr = 0
+        val_ssim = 0
         with torch.no_grad():
+            #val_tab = wandb.Table()
+            #val_tab.add_row("image", "l1", "nmse", "psnr", "ssim")
             with tqdm(total=n_val, desc=f'Val Epoch {epoch + 1}/{args.epochs}', unit='img') as pbar_val:
                 for idx, batch in enumerate(val_dataloader):
                     inputs, outputs = fastmri_dataloader.prepare_batch(batch, device)
@@ -201,7 +210,8 @@ def train(net, device, args):
                     gnd = outputs[0]
 
                     output = net(*inputs[:-1])
-                    val_loss = F_fastmri.masked_l1_loss(output.abs(), gnd.abs(), fg_mask)
+                    #val_loss = F_fastmri.masked_l1_loss(output.abs(), gnd.abs(), fg_mask)
+                    l1, nmse, psnr, ssim = F_fastmri.evaluate(output.abs(), gnd.abs(), (-2,-1), fg_mask)
 
                     # logging.info('Validation {}/{} loss: {}'.format(idx, ceil(n_val / args.batch_size), val_loss))
 
@@ -213,22 +223,38 @@ def train(net, device, args):
                     log_im = torch.cat([log_input_im * log_fg_mask_im,
                                         log_output_im * log_fg_mask_im,
                                         log_gnd_im * log_fg_mask_im
-                                        ], dim=1) / log_gnd_im.max()
+                                        ], dim=2) / log_gnd_im.max()
                     log_im = torch.clamp_max(log_im, 1)
 
-                    val_score += val_loss / len(val_dataloader)
+                    #val_score += val_loss / len(val_dataloader)
+                    val_l1 += l1 / len(val_dataloader)
+                    val_nmse += nmse / len(val_dataloader)
+                    val_psnr += psnr / len(val_dataloader)
+                    val_ssim += ssim / len(val_dataloader)
+                    
+                    #val_tab.add_row(wandb.Image(log_im.float().cpu()), )
+
                     pbar_val.update(x0.shape[0])
-                    pbar_val.set_postfix(**{'loss (batch)': val_loss.item()})
+                    pbar_val.set_postfix(**{'loss (batch)': l1.item()})
+                    experiment.log({
+                        'val_images/results': wandb.Image(log_im.float().cpu()),
+                        'idx': idx
+                    })
+
 
             experiment.log({
                 #'val/lr': optimizer.param_groups[0]['lr'],
-                'val/loss': val_score,
-                'val/in_out_gnd': wandb.Image(log_im.float().cpu()),
-                'val/step': global_step,
+                'val/loss': val_l1,
+                'val/nmse': val_nmse,
+                'val/psnr': val_psnr,
+                'val/ssim': val_ssim,
+                'epoch': epoch + 1,
+                #'val/step': global_step,
+                #'val/step': epoch + 1,
                 #'val/epoch': epoch,
                 **histograms
             })
-
+            val_score = val_l1
             scheduler.step(val_score)
 
 
