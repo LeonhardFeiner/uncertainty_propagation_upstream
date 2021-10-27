@@ -9,8 +9,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
-import merlinpy
-import merlinth
+import fastmri.utils
 import unittest
 
 class _Residual_Block(nn.Module):
@@ -189,7 +188,7 @@ class Real2ChDIDN(nn.Module):
 
 
     def forward(self, x):
-        x = merlinth.complex2real(x)
+        x = fastmri.utils.complex2real(x)
 
         if self.pad_data:
             orig_shape2d = x.shape[-2:]
@@ -217,7 +216,7 @@ class Real2ChDIDN(nn.Module):
 
         if self.pad_data:
             out = self.unpad2d(out, orig_shape2d)
-        out = merlinth.real2complex(out)
+        out = fastmri.utils.real2complex(out)
         return out
             
     def calculate_downsampling_padding2d(self, tensor, num_pool_layers):
@@ -239,7 +238,7 @@ class Real2ChDIDN(nn.Module):
         if tensor.shape == shape:
             return tensor
         else:
-            return merlinpy.center_crop(tensor, shape)
+            return fastmri.utils.center_crop(tensor, shape)
 
 class TestDIDN(unittest.TestCase):
     def testDidn(self):

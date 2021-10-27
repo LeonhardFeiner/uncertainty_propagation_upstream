@@ -5,7 +5,7 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-import merlinth
+import fastmri.utils
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -75,7 +75,7 @@ class Unet(nn.Module):
         Returns:
             Output tensor of shape `(N, out_chans, H, W)`.
         """
-        image = merlinth.complex2real(image)
+        image = fastmri.utils.complex2real(image)
         stack = []
         output = image
 
@@ -104,7 +104,7 @@ class Unet(nn.Module):
             output = torch.cat([output, downsample_layer], dim=1)
             output = conv(output)
 
-        return merlinth.real2complex(output)
+        return fastmri.utils.real2complex(output)
 
 
 class ConvBlock(nn.Module):

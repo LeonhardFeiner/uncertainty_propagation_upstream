@@ -6,7 +6,6 @@ from . import transforms
 from functools import reduce
 import tensorflow as tf
 import unittest
-import merlinpy
 from .fastmri_dataloader_base import FastmriCartesianDatasetBase
 
 class FastmriCartesianDataset(FastmriCartesianDatasetBase, tf.keras.utils.Sequence):
@@ -58,9 +57,9 @@ class FastmriCartesianDataset(FastmriCartesianDatasetBase, tf.keras.utils.Sequen
 class TestDataloader(unittest.TestCase):
     def _test(self, mode):
         import medutils
-
+        import merlin_utils
         path = os.path.dirname(os.path.realpath(__file__))
-        config = merlinpy.loadYaml(f'{path}/config.yml', 'BaseExperiment')
+        config = merlin_utils.loadYaml(f'{path}/config.yml', 'BaseExperiment')
         ds = FastmriCartesianDataset(config, mode=mode)
 
         if not 'test' in mode:

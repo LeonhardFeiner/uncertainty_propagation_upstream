@@ -1,7 +1,7 @@
 import torch
 import unittest
 import numpy as np
-import merlinth
+import fastmri.utils
 
 class Real2chCNN(torch.nn.Module):
     def __init__(self, dim='2D', input_dim=1, filters=64, kernel_size=3, num_layer=5,
@@ -45,9 +45,9 @@ class Real2chCNN(torch.nn.Module):
                 module.bias.data.fill_(0)
 
     def forward(self, inputs):
-        x = merlinth.complex2real(inputs)
+        x = fastmri.utils.complex2real(inputs)
         x = self.ops(x)
-        return merlinth.real2complex(x)
+        return fastmri.utils.real2complex(x)
 
 class TestCNN(unittest.TestCase):
     def testCnn(self):

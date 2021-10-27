@@ -2,7 +2,7 @@ import numpy as np
 import medutils
 import h5py
 import os
-import merlinpy
+import fastmri_dataloader.utils
 
 class Transpose():
     def __init__(self, transpose_list):
@@ -103,6 +103,8 @@ class GeneratePatches():
             np_target_reduced = medutils.mri.ifft2c(np_kspace_reduced)
 
         sample['reference'] = np_target_reduced
+        if self.multicoil:
+            sample['reference'] = sample['reference'][...,None]
         sample['kspace'] = np_kspace_reduced
         sample['mask'] = np_mask
         if self.multicoil:
@@ -338,7 +340,7 @@ class LoadCoilSensitivities():
             # use only num_smaps set of espirit coil sensitivity maps
        #     try:
             smaps_sl = h5_data[f"smaps_acl{acl}"]
-            smaps_sl = merlinpy.np_ensure_complex64(
+            smaps_sl = fastmri_dataloader.utils.np_ensure_complex64(
             smaps_sl[sample["slidx"][i], :, :self.num_smaps:]
         )
             # except:
@@ -354,7 +356,7 @@ class LoadCoilSensitivities():
 
             if not is_testset:
                 ref = h5_data[f"reference_acl{acl}"]
-                np_target.append(merlinpy.np_ensure_complex64(
+                np_target.append(fastmri_dataloader.utils.np_ensure_complex64(
                     ref[sample["slidx"][i], :self.num_smaps:]
                 ))
                     # np_max.append(
@@ -396,38 +398,38 @@ class LoadForegroundMask():
             'r',
         )
 
-        sample['fg_mask'] = merlinpy.np_ensure_float32(h5_data['foreground'][sample["slidx"]][:,None])
+        sample['fg_mask'] = fastmri_dataloader.utils.np_ensure_float32(h5_data['foreground'][sample["slidx"]][:,None])
         h5_data.close()
         return sample
 
-def get_keras_transform(mode, config):
-    from merlintf.keras.utils import ToKerasIO
-    if mode == 'singlecoil_train':
-        transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
-                                                        accelerations=config['accelerations'],
-                                                        is_train=True),
-                    GeneratePatches(**config[f'{mode}_ds']['patch'], multicoil=False),
-                    ComputeInit(multicoil=False),
-                    ToKerasIO(['noisy', 'kspace', 'mask'], ['reference'])
-                    ]
-    elif mode == 'singlecoil_val':
-        transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
-                                                        accelerations=config['accelerations'],
-                                                        is_train=False),
-                    GeneratePatches(**config[f'{mode}_ds']['patch'], multicoil=False),
-                    ComputeInit(multicoil=False),
-                    ToKerasIO(['noisy', 'kspace', 'mask'], ['reference'])
-                    ]
+# def get_keras_transform(mode, config):
+#     from merlintf.keras.utils import ToKerasIO
+#     if mode == 'singlecoil_train':
+#         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
+#                                                         accelerations=config['accelerations'],
+#                                                         is_train=True),
+#                     GeneratePatches(**config[f'{mode}_ds']['patch'], multicoil=False),
+#                     ComputeInit(multicoil=False),
+#                     ToKerasIO(['noisy', 'kspace', 'mask'], ['reference'])
+#                     ]
+#     elif mode == 'singlecoil_val':
+#         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
+#                                                         accelerations=config['accelerations'],
+#                                                         is_train=False),
+#                     GeneratePatches(**config[f'{mode}_ds']['patch'], multicoil=False),
+#                     ComputeInit(multicoil=False),
+#                     ToKerasIO(['noisy', 'kspace', 'mask'], ['reference'])
+#                     ]
 
-    elif mode == 'singlecoil_test':
-        transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
-                                                        accelerations=config['accelerations'],
-                                                        is_train=False),
-                    ComputeInit(multicoil=False),
-                    ]
-    else:
-        raise ValueError(f'Mode {mode} does not exist!')
-    return transform
+#     elif mode == 'singlecoil_test':
+#         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
+#                                                         accelerations=config['accelerations'],
+#                                                         is_train=False),
+#                     ComputeInit(multicoil=False),
+#                     ]
+#     else:
+#         raise ValueError(f'Mode {mode} does not exist!')
+#     return transform
 
 def get_torch_transform(mode, config):
     #from merlinth.utils import ToTorchIO
@@ -465,9 +467,9 @@ def get_torch_transform(mode, config):
                                                         accelerations=config['accelerations'],
                                                         is_train=True),
                     LoadCoilSensitivities(config[f'{mode}_ds']['sens_dir'], num_smaps=config['num_smaps']),
+                    LoadForegroundMask(config[f'{mode}_ds']['fg_dir']),
                     ComputeInit(multicoil=True),
                     GeneratePatches(**config[f'{mode}_ds']['patch'], multicoil=True),
-                    LoadForegroundMask(config[f'{mode}_ds']['fg_dir']),
                     Transpose([('noisy', (0, 4, 1, 3, 2)), ('reference',  (0, 4, 1, 3, 2))]),
                     ToTorchIO(['noisy', 'kspace', 'mask', 'smaps', 'fg_mask'], ['reference'])
                     ]

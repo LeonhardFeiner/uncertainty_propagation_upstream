@@ -7,7 +7,6 @@ from . import transforms
 import torch
 import torchvision
 import unittest
-import merlinpy
 from .fastmri_dataloader_base import FastmriCartesianDatasetBase
 
 class FastmriCartesianDataset(FastmriCartesianDatasetBase, torch.utils.data.Dataset):
@@ -31,9 +30,9 @@ class FastmriCartesianDataset(FastmriCartesianDatasetBase, torch.utils.data.Data
 class TestSingleCoilDataloader(unittest.TestCase):
     def _test(self, mode):
         import medutils
-
+        import merlin_utils
         path = os.path.dirname(os.path.realpath(__file__))
-        config = merlinpy.loadYaml(f'{path}/config.yml', 'BaseExperiment')
+        config = merlin_utils.loadYaml(f'{path}/config.yml', 'BaseExperiment')
         ds = FastmriCartesianDataset(config, mode=mode)
         if not 'test' in mode:
             inputs, outputs = ds.__getitem__(0)
@@ -73,9 +72,9 @@ class TestSingleCoilDataloader(unittest.TestCase):
 class TestMultiCoilDataloader(unittest.TestCase):
     def _test(self, mode):
         import medutils
-
+        import merlin_utils
         path = os.path.dirname(os.path.realpath(__file__))
-        config = merlinpy.loadYaml(f'{path}/config.yml', 'BaseExperiment')
+        config = merlin_utils.loadYaml(f'{path}/config.yml', 'BaseExperiment')
         ds = FastmriCartesianDataset(config, mode=mode)
         if not 'test' in mode:
             inputs, outputs = ds.__getitem__(0)

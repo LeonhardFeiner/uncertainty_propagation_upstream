@@ -1,5 +1,4 @@
 import torch
-import merlinpy
 import os
 import sys
 from pathlib import Path
@@ -9,6 +8,7 @@ from fastmri_dataloader.fastmri_dataloader_th import FastmriCartesianDataset
 from fastmri.models.dncn import DnCn
 from fastmri.models.unet import Unet
 from fastmri.models.snet import Snet
+from merlin_utils import loadYaml
 import fastmri.losses
 import fastmri.functional as F_fastmri
 
@@ -69,7 +69,7 @@ def train(net, device, args):
     #os.environ['FASTMRI_ROOT'] = '/home/wenqi/Data/FastMRI'
 
     config_path = './fastmri_dataloader/config.yml'
-    config = merlinpy.loadYaml(config_path, 'BaseExperiment')
+    config = loadYaml(config_path, 'BaseExperiment')
     train_dataset = FastmriCartesianDataset(config, mode='singlecoil_train')
     val_dataset = FastmriCartesianDataset(config, mode='singlecoil_val')
     loader_args = dict(batch_size=1, num_workers=args.num_workers, pin_memory=True)

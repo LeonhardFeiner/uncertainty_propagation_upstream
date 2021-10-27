@@ -1,7 +1,6 @@
 import torch
 from torch import nn
 import unittest
-import merlinth
 import numpy as np
 import torch.nn.functional as F
 from fastmri.layers.fft import fft2, ifft2, fft2c, ifft2c
@@ -36,9 +35,9 @@ class SCell(nn.Module):
         self.ifft = ifft2c if center_fft else ifft2
 
     def forward(self, x, k0, mask):
-        x = merlinth.complex2real(x)
+        x = fastmri.utils.complex2real(x)
         s = self.conv_block(x)
-        s = merlinth.real2complex(s)
+        s = fastmri.utils.real2complex(s)
         dc = self.dataconsis(s, k0, mask)
         if not self.is_last:
             gamma = F.relu(self._gamma)
