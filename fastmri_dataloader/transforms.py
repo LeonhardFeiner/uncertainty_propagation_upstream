@@ -462,6 +462,22 @@ def get_torch_transform(mode, config):
                     ComputeInit(multicoil=False),
                     Transpose([('noisy', (0, 3, 1, 2))]),
                     ]
+    if mode == 'denoising_singlecoil_train':
+        transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
+                                                        accelerations=config['accelerations'],
+                                                        is_train=True),
+                    ComputeInit(multicoil=False),
+                    Transpose([('noisy', (0, 3, 1, 2)), ('reference',  (0, 3, 1, 2))]),
+                    ToTorchIO(['noisy',], ['reference'])
+                    ]
+    elif mode == 'denoising_singlecoil_val':
+        transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
+                                                        accelerations=config['accelerations'],
+                                                        is_train=False),
+                    ComputeInit(multicoil=False),
+                    Transpose([('noisy', (0, 3, 1, 2)), ('reference',  (0, 3, 1, 2))]),
+                    ToTorchIO(['noisy'], ['reference'])
+                    ]
     elif mode == 'multicoil_train':
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
                                                         accelerations=config['accelerations'],
