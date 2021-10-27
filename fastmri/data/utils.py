@@ -43,3 +43,4 @@ def np_ensure_float32(x):
         return np.ascontiguousarray(x.astype(np.float32))
     else:
         return x
+

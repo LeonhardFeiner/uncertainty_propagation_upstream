@@ -3,12 +3,12 @@ import os
 import sys
 from pathlib import Path
 from numpy import ceil
-import fastmri_dataloader
-from fastmri_dataloader.fastmri_dataloader_th import FastmriCartesianDataset
+import fastmri.data
+from fastmri.data.fastmri_dataloader_th import FastmriCartesianDataset
 from fastmri.models.dncn import DnCn
 from fastmri.models.unet import Unet
 from fastmri.models.snet import Snet
-from merlin_utils import loadYaml
+from fastmri.utils import loadYaml
 import fastmri.losses
 import fastmri.functional as F_fastmri
 
@@ -68,7 +68,7 @@ def get_args():
 def train(net, device, args):
     #os.environ['FASTMRI_ROOT'] = '/home/wenqi/Data/FastMRI'
 
-    config_path = './fastmri_dataloader/config.yml'
+    config_path = './config.yml'
     config = loadYaml(config_path, 'BaseExperiment')
     train_dataset = FastmriCartesianDataset(config, mode='singlecoil_train')
     val_dataset = FastmriCartesianDataset(config, mode='singlecoil_val')
@@ -128,7 +128,7 @@ def train(net, device, args):
         
         with tqdm(total=n_train, desc=f'Train Epoch {epoch + 1}/{args.epochs}', unit='img') as pbar:
             for batch in train_dataloader:
-                inputs, outputs = fastmri_dataloader.prepare_batch(batch, device)
+                inputs, outputs = fastmri.data.prepare_batch(batch, device)
                 
                 x0 = inputs[0]
                 fg_mask = inputs[-1]
@@ -206,7 +206,7 @@ def train(net, device, args):
             #val_tab.add_row("image", "l1", "nmse", "psnr", "ssim")
             with tqdm(total=n_val, desc=f'Val Epoch {epoch + 1}/{args.epochs}', unit='img') as pbar_val:
                 for idx, batch in enumerate(val_dataloader):
-                    inputs, outputs = fastmri_dataloader.prepare_batch(batch, device)
+                    inputs, outputs = fastmri.data.prepare_batch(batch, device)
 
                     x0 = inputs[0]
                     fg_mask = inputs[-1]

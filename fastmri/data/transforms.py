@@ -2,7 +2,7 @@ import numpy as np
 import medutils
 import h5py
 import os
-import fastmri_dataloader.utils
+import fastmri.data.utils
 
 class Transpose():
     def __init__(self, transpose_list):
@@ -340,7 +340,7 @@ class LoadCoilSensitivities():
             # use only num_smaps set of espirit coil sensitivity maps
        #     try:
             smaps_sl = h5_data[f"smaps_acl{acl}"]
-            smaps_sl = fastmri_dataloader.utils.np_ensure_complex64(
+            smaps_sl = fastmri.data.utils.np_ensure_complex64(
             smaps_sl[sample["slidx"][i], :, :self.num_smaps:]
         )
             # except:
@@ -356,7 +356,7 @@ class LoadCoilSensitivities():
 
             if not is_testset:
                 ref = h5_data[f"reference_acl{acl}"]
-                np_target.append(fastmri_dataloader.utils.np_ensure_complex64(
+                np_target.append(fastmri.data.utils.np_ensure_complex64(
                     ref[sample["slidx"][i], :self.num_smaps:]
                 ))
                     # np_max.append(
@@ -398,7 +398,7 @@ class LoadForegroundMask():
             'r',
         )
 
-        sample['fg_mask'] = fastmri_dataloader.utils.np_ensure_float32(h5_data['foreground'][sample["slidx"]][:,None])
+        sample['fg_mask'] = fastmri.data.utils.np_ensure_float32(h5_data['foreground'][sample["slidx"]][:,None])
         h5_data.close()
         return sample
 
@@ -462,12 +462,15 @@ def get_torch_transform(mode, config):
                     ComputeInit(multicoil=False),
                     Transpose([('noisy', (0, 3, 1, 2))]),
                     ]
-    if mode == 'denoising_singlecoil_train':
+    elif mode == 'denoising_singlecoil_train':
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
                                                         accelerations=config['accelerations'],
                                                         is_train=True),
                     ComputeInit(multicoil=False),
                     Transpose([('noisy', (0, 3, 1, 2)), ('reference',  (0, 3, 1, 2))]),
+                    #TODO center_crop
+                    #TODO normalization
+                    #TODO magnitude network
                     ToTorchIO(['noisy',], ['reference'])
                     ]
     elif mode == 'denoising_singlecoil_val':

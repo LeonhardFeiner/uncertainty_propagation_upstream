@@ -30,9 +30,8 @@ class FastmriCartesianDataset(FastmriCartesianDatasetBase, torch.utils.data.Data
 class TestSingleCoilDataloader(unittest.TestCase):
     def _test(self, mode):
         import medutils
-        import merlin_utils
-        path = os.path.dirname(os.path.realpath(__file__))
-        config = merlin_utils.loadYaml(f'{path}/config.yml', 'BaseExperiment')
+        import fastmri.utils
+        config = fastmri.utils.loadYaml(f'./config.yml', 'BaseExperiment')
         ds = FastmriCartesianDataset(config, mode=mode)
         if not 'test' in mode:
             inputs, outputs = ds.__getitem__(0)
@@ -72,9 +71,8 @@ class TestSingleCoilDataloader(unittest.TestCase):
 class TestMultiCoilDataloader(unittest.TestCase):
     def _test(self, mode):
         import medutils
-        import merlin_utils
-        path = os.path.dirname(os.path.realpath(__file__))
-        config = merlin_utils.loadYaml(f'{path}/config.yml', 'BaseExperiment')
+        import fastmri.utils
+        config = fastmri.utils.loadYaml(f'./config.yml', 'BaseExperiment')
         ds = FastmriCartesianDataset(config, mode=mode)
         if not 'test' in mode:
             inputs, outputs = ds.__getitem__(0)
