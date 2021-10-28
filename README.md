@@ -1,3 +1,11 @@
+# Setup fastMRI environment
+```
+conda create --name fastmri
+conda activate fastmri
+conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch # haven't tested with cudatoolkit=11.3 yet...
+# conda install pytorch=1.9.1 torchvision torchaudio cudatoolkit=11.1 -c pytorch -c nvidia # that's what I use right now...
+```
+
 # Install requirements
 ```
 pip install -r requirements.txt
@@ -32,6 +40,5 @@ python ./data_processing/create_dataset_csv.py --data-path ${FASTMRI_ROOT} --csv
 First, adapt the `<fastmri-root-dir>` in `fastmri_dataloader/config.yml`
 
 ```
-python -m unittest fastmri_dataloader/fastmri_dataloader_tf.py
 python -m unittest fastmri_dataloader/fastmri_dataloader_th.py
 ```
