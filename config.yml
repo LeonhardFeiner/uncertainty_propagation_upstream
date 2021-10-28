@@ -4,6 +4,7 @@ BaseExperiment: &defaults
     # root_dir: /home/wenqi/Data/FastMRI/
     root_dir: /labspace/data/public/fastmri
     batch_size: 8
+    use_fg_mask: False
     singlecoil_train_ds:
         csv_file: ./datasets/fastmri_singlecoil_knee_train.csv
         fg_dir: singlecoil_train_foreground
