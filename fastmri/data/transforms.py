@@ -448,7 +448,6 @@ def get_torch_transform(mode, config):
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
                                                         accelerations=config['accelerations'],
                                                         is_train=True),
-                    #LoadForegroundMask(config[f'{mode}_ds']['fg_dir']),
                     GeneratePatches(**config[f'{mode}_ds']['patch'], multicoil=False),
                     ComputeInit(multicoil=False),
                     Transpose([('noisy', (0, 3, 1, 2)), ('reference',  (0, 3, 1, 2))]),
@@ -458,7 +457,6 @@ def get_torch_transform(mode, config):
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
                                                         accelerations=config['accelerations'],
                                                         is_train=False),
-                    #LoadForegroundMask(config[f'{mode}_ds']['fg_dir']),
                     GeneratePatches(**config[f'{mode}_ds']['patch'], multicoil=False),
                     ComputeInit(multicoil=False),
                     Transpose([('noisy', (0, 3, 1, 2)), ('reference',  (0, 3, 1, 2))]),
@@ -469,7 +467,6 @@ def get_torch_transform(mode, config):
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
                                                         accelerations=config['accelerations'],
                                                         is_train=False),
-                    #LoadForegroundMask(config[f'{mode}_ds']['fg_dir']),
                     ComputeInit(multicoil=False),
                     Transpose([('noisy', (0, 3, 1, 2))]),
                     ]
@@ -497,7 +494,6 @@ def get_torch_transform(mode, config):
                                                         accelerations=config['accelerations'],
                                                         is_train=True),
                     LoadCoilSensitivities(config[f'{mode}_ds']['sens_dir'], num_smaps=config['num_smaps']),
-                    #LoadForegroundMask(config[f'{mode}_ds']['fg_dir']),
                     ComputeInit(multicoil=True),
                     GeneratePatches(**config[f'{mode}_ds']['patch'], multicoil=True),
                     Transpose([('noisy', (0, 4, 1, 3, 2)), ('reference',  (0, 4, 1, 3, 2))]),
@@ -508,7 +504,6 @@ def get_torch_transform(mode, config):
                                                         accelerations=config['accelerations'],
                                                         is_train=True),
                     LoadCoilSensitivities(config[f'{mode}_ds']['sens_dir'], num_smaps=config['num_smaps']),
-                    #LoadForegroundMask(config[f'{mode}_ds']['fg_dir']),
                     ComputeInit(multicoil=True),
                     Transpose([('noisy', (0, 4, 1, 3, 2)), ('reference',  (0, 4, 1, 3, 2))]),
                     ToTorchIO(['noisy', 'kspace', 'mask', 'smaps', 'fg_mask'], ['reference'])
@@ -518,7 +513,6 @@ def get_torch_transform(mode, config):
                                                         accelerations=config['accelerations'],
                                                         is_train=True),
                     LoadCoilSensitivities(config[f'{mode}_ds']['sens_dir'], num_smaps=config['num_smaps']),
-                    #LoadForegroundMask(config[f'{mode}_ds']['fg_dir']),
                     ComputeInit(multicoil=True),
                     Transpose([('noisy', (0, 4, 1, 3, 2))]),
                     ]
