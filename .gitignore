@@ -6,3 +6,4 @@ wandb
 *.cfl
 *.hdr
 ckpt
+test_results
