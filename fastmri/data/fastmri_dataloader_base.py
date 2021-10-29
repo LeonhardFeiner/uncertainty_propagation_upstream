@@ -5,6 +5,7 @@ import h5py
 import numpy as np
 import pandas as pd
 import fastmri.data.utils
+
 class FastmriCartesianDatasetBase(object):
     """MRI data set."""
 
@@ -109,10 +110,15 @@ class FastmriCartesianDatasetBase(object):
                 # swmr=True,
         ) as data:
             np_kspace = data['kspace']
+            
             if self.batch_size > np_kspace.shape[0]:
                 np_kspace = np_kspace[:]  # faster than smart indexing
+                np_target = data['reconstruction_esc'][:] if 'reconstruction_esc' in data else None
             else:
                 np_kspace = np_kspace[slidx]
+                np_target = data['reconstruction_esc'][slidx] if 'reconstruction_esc' in data else None
+
+            np_target = fastmri.data.utils.np_ensure_complex64(np_target) if 'reconstruction_esc' in data else None
             np_kspace = fastmri.data.utils.np_ensure_complex64(np_kspace)
             np_kspace_bg = fastmri.data.utils.np_ensure_complex64(data['kspace'][0])
 
@@ -144,6 +150,9 @@ class FastmriCartesianDatasetBase(object):
             "fname": fname,
             "rootdir": os.path.join(self.root_dir, fname.split(split_str)[0])
         }
+
+        if 'singlecoil' in self.mode and np_target is not None:
+            sample['reference'] = np_target[:,None]
 
         if self.transform:
             sample = self._apply_transform(sample)

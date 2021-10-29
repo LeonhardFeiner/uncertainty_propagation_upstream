@@ -131,13 +131,16 @@ def train(net, device, args):
                 inputs, outputs = fastmri.data.prepare_batch(batch, device)
                 
                 x0 = inputs[0]
-                fg_mask = inputs[-1]
                 gnd = outputs[0]
+                fg_mask = inputs[-1] if 'use_fg_mask' else torch.ones_like(x0, dtype=torch.float32)
 
                 with torch.cuda.amp.autocast(enabled=args.amp):
-                    output = net(*inputs[:-1]) # pass all inputs except fg_mask
+                    if config['use_fg_mask']:
+                        output = net(*inputs[:-1]) # pass all inputs except fg_mask
+                    else:
+                        output = net(*inputs)
                     loss = criterion(output.abs(), gnd.abs(), fg_mask)
-                
+                    
                 optimizer.zero_grad(set_to_none=True)
                 grad_scaler.scale(loss).backward()
                 grad_scaler.step(optimizer)
@@ -209,10 +212,14 @@ def train(net, device, args):
                     inputs, outputs = fastmri.data.prepare_batch(batch, device)
 
                     x0 = inputs[0]
-                    fg_mask = inputs[-1]
+                    fg_mask = inputs[-1] if config['use_fg_mask'] else torch.ones_like(x0, dtype=torch.float32)
                     gnd = outputs[0]
 
-                    output = net(*inputs[:-1])
+                    if config['use_fg_mask']:
+                        output = net(*inputs[:-1]) # pass all inputs except fg_mask
+                    else:
+                        output = net(*inputs)
+
                     #val_loss = F_fastmri.masked_l1_loss(output.abs(), gnd.abs(), fg_mask)
                     l1, nmse, psnr, ssim = F_fastmri.evaluate(output.abs(), gnd.abs(), (-2,-1), fg_mask)
 

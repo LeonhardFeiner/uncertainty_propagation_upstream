@@ -1,4 +1,7 @@
 import torch
+import re
+import yaml
+import os
 
 def center_crop(data, shape, channel_last=False):
     """
@@ -41,10 +44,6 @@ def real2complex(z, channel_last=False):
     stack_dim = -1 if channel_last else 1
     (real, imag) = torch.chunk(z, 2, axis=stack_dim)
     return torch.complex(real, imag)
-
-import re
-import yaml
-import os
 
 def loadYaml(cfile, experiment):
     """
