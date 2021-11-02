@@ -1,0 +1,36 @@
+name: py3fastmri
+channels:
+  - defaults
+  - pytorch
+  - conda-forge
+dependencies:
+  # - black
+  - pytorch>=1.10
+  - torchvision
+  - h5py
+  - matplotlib
+  # - nb_conda
+  - numpy>=1.20
+  - pandas
+  - pillow
+  - pip
+  # - pylint
+  - python
+  - scipy
+  - scikit-learn
+  - scikit-image
+  - imageio
+  - cycler
+  - wandb
+  - pywavelets
+  - pyparsing
+  - networkx
+  - tifffile
+  - xmltodict
+  - tqdm
+  - pip:
+    - git+https://github.com/khammernik/medutils.git@master
+variables:
+  FASTMRI_ROOT: /home/feiner/datasets
+  WANDB_DIR: /home/feiner/logs
+
