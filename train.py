@@ -132,7 +132,7 @@ def train(net, device, args):
                 
                 x0 = inputs[0]
                 gnd = outputs[0]
-                fg_mask = inputs[-1] if 'use_fg_mask' else torch.ones_like(x0, dtype=torch.float32)
+                fg_mask = inputs[-1] if config['use_fg_mask'] else torch.ones_like(x0, dtype=torch.float32)
 
                 with torch.cuda.amp.autocast(enabled=args.amp):
                     if config['use_fg_mask']:
