@@ -70,3 +70,29 @@ class MaskedL1Loss(torch.nn.L1Loss):
 
     def forward(self, input: torch.Tensor, target: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         return F.masked_l1_loss(input, target, mask, reduction=self.reduction)
+
+
+
+class AttenuatedL2Loss(torch.nn.L1Loss):
+    __constants__ = ['reduction']
+
+    def __init__(self, reduction: str = 'mean') -> None:
+        assert reduction in ['mean', 'none']
+        super(MaskedL1Loss, self).__init__(None, None, reduction)
+
+    def forward(self, input: torch.Tensor, target: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        return F.attenuated_l2_loss(input, target, mask, reduction=self.reduction)
+
+
+class MaskedAttenuatedL2Loss(torch.nn.MSELoss):
+    __constants__ = ['reduction']
+
+    def __init__(self, reduction: str = 'mean') -> None:
+        assert reduction in ['mean', 'none']
+        super(MaskedAttenuatedL2Loss, self).__init__(None, None, reduction)
+
+    def forward(
+        self, input: torch.Tensor, target: torch.Tensor, mask: torch.Tensor, log_sigma_squared: torch.Tensor
+    ) -> torch.Tensor:
+        # return F.attenuated_masked_l2_loss(input, target, mask, log_sigma_squared, reduction=self.reduction)
+        return F.attenuated_l2_loss(input, target, log_sigma_squared, reduction=self.reduction)

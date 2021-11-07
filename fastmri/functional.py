@@ -20,6 +20,51 @@ def masked_l1_loss(
         loss = loss.view(batchsize, -1).sum(-1).mean()
     return loss
 
+def attenuated_l2_loss(
+    input: torch.Tensor,
+    target: torch.Tensor,
+    log_sigma_squared: torch.Tensor,
+    reduction: str = "mean",
+) -> torch.Tensor:
+    assert reduction in ['none', 'mean']
+    batchsize = input.size()[0]
+
+    loss = (
+        F.mse_loss(input, target, reduction='none') * torch.exp(-log_sigma_squared)
+        + log_sigma_squared * 0.5
+    )
+
+
+    if reduction == 'mean':
+        loss = loss.mean()
+    return loss
+
+
+def attenuated_masked_l2_loss(
+    input: torch.Tensor,
+    target: torch.Tensor,
+    mask :torch.Tensor,
+    log_sigma_squared: torch.Tensor,
+    reduction: str = "mean",
+) -> torch.Tensor:
+    assert reduction in ['none', 'mean']
+    batchsize = input.size()[0]
+
+    mask_norm = mask.sum((-2,-1), keepdim=True)
+    mask_norm = torch.max(mask_norm, torch.ones_like(mask_norm))
+
+    loss = (
+        F.mse_loss(input * mask, target * mask, reduction='none') / mask_norm * torch.exp(-log_sigma_squared)
+        + log_sigma_squared * 0.5 * mask / mask_norm
+    )
+
+
+
+    if reduction == 'mean':
+        loss = loss.view(batchsize, -1).sum(-1).mean()
+    return loss
+
+
 def evaluate(
     input: torch.Tensor,
     target: torch.Tensor,

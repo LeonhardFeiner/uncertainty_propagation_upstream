@@ -3,9 +3,13 @@ import unittest
 import numpy as np
 import fastmri.utils
 
+class TestDropout(torch.nn.Dropout):
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        return torch.nn.functional.dropout(input, self.p, True, self.inplace)
+
 class Real2chCNN(torch.nn.Module):
     def __init__(self, dim='2D', input_dim=1, filters=64, kernel_size=3, num_layer=5,
-                       activation='relu', use_bias=True, **kwargs):
+                       activation='relu', use_bias=True, dropout_probability=0, test_dropout=False, **kwargs):
         super().__init__()
         # get correct conv operator
         if dim == '2D':
@@ -15,6 +19,11 @@ class Real2chCNN(torch.nn.Module):
         else:
             raise RuntimeError(f"Convlutions for dim={dim} not implemented!")
 
+        if test_dropout:
+            dropout_layer = TestDropout
+        else:
+            dropout_layer = torch.nn.Dropout
+
         if activation == 'relu':
             act_layer = torch.nn.ReLU
 
@@ -23,11 +32,15 @@ class Real2chCNN(torch.nn.Module):
         self.ops = []
         self.ops.append(conv_layer(input_dim * 2, filters, kernel_size, padding=padding,
                                         bias=use_bias,**kwargs))
+        if dropout_probability > 0:
+            self.ops.append(dropout_layer(dropout_probability))
         self.ops.append(act_layer(inplace=True))
             
         for _ in range(num_layer-2):
             self.ops.append(conv_layer(filters, filters, kernel_size, padding=padding,
                                         bias=use_bias,**kwargs))
+            if dropout_probability > 0:
+                self.ops.append(dropout_layer(dropout_probability))
             self.ops.append(act_layer(inplace=True))
 
         self.ops.append(conv_layer(filters, input_dim * 2, kernel_size,
