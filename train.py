@@ -69,10 +69,13 @@ def get_args():
         "--num-samples", default=8, type=int,
         help="number of samples should be drawn fore calculating epistemic uncertainty. Needs dropout")
     parser.add_argument(
-        "--aleatoric",  action='store_true', help="Indicator whether network should model aleatoric uncertainty.")
+        "--aleatoric",  action='store_true', help="Indicator whether network should model aleatoric uncertainty")
     parser.add_argument(
         "--combined-aleatoric",  action='store_true',
         help="Indicator whether aleatoric prediction should use feature maps of every layer as input. Needs aleatoric")
+    parser.add_argument(
+        "--l2",  action='store_true',
+        help="Indicator whether to use l2 loss instead of l1 loss")
 
     return parser.parse_args()
 
@@ -94,11 +97,17 @@ def train(net, device, args):
     optimizer = optim.Adam(net.parameters(), lr=args.lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', factor=0.5)
     grad_scaler = torch.cuda.amp.GradScaler(enabled=args.amp)
-    if args.aleatoric:
-        criterion = fastmri.losses.MaskedAttenuatedL2Loss()
-
+    if args.l2:
+        if args.aleatoric:
+            criterion = fastmri.losses.MaskedAttenuatedL2Loss()
+        else:
+            criterion = fastmri.losses.MaskedL2Loss()
     else:
-        criterion = fastmri.losses.MaskedL1Loss()
+        if args.aleatoric:
+            criterion = fastmri.losses.MaskedAttenuatedL1Loss()
+        else:
+            criterion = fastmri.losses.MaskedL1Loss()
+        
 
     global_step = 0
 
@@ -159,8 +168,14 @@ def train(net, device, args):
                     output = net(*selected_input)
 
                     if args.aleatoric:
-                        output, log_sigma_squared = output                        
-                        loss = criterion(output.abs(), gnd.abs(), fg_mask, log_sigma_squared)
+                        output, raw_uncertainty = output                        
+                        loss = criterion(output.abs(), gnd.abs(), fg_mask, raw_uncertainty)
+
+                        if args.l2:
+                            aleatoric_std = torch.sqrt(torch.exp(raw_uncertainty))
+                        else:
+                            aleatoric_std = torch.exp(raw_uncertainty) * torch.sqrt(raw_uncertainty.new_tensor(2))
+                            # sigma ** 2 = 2 * b ** 2
 
                     else:
                         loss = criterion(output.abs(), gnd.abs(), fg_mask)
@@ -187,8 +202,7 @@ def train(net, device, args):
                     log_gnd_im * log_fg_mask_im / log_gnd_im.max(),
                 ]
                 if args.aleatoric:
-                    log_aleatoric = torch.sqrt(torch.exp(log_sigma_squared[0])).flip(1)
-                    log_im_list += [log_aleatoric * log_fg_mask_im / log_aleatoric.max()]                    
+                    log_aleatoric = aleatoric_std[0].flip(1)               
                 
                 log_im = torch.cat(log_im_list, dim=2) / log_gnd_im.max()
                 log_im = torch.clamp_max(log_im, 1)
@@ -262,11 +276,13 @@ def train(net, device, args):
                         epistemic_var = torch.var(output_samples, axis=0)
                         # epistemic_var = torch.real(epistemic_var_complex) + torch.imag(epistemic_var_complex)
                     else:
+                        output_raw = net(*selected_input)
                         if args.aleatoric:
-                            output, log_sigma_squared = output                        
+                            output, log_sigma_squared = output_raw                        
                             # val_loss = criterion(output.abs(), gnd.abs(), fg_mask, log_sigma_squared)
 
                         else:
+                            output = output_raw
                             # val_loss = criterion(output.abs(), gnd.abs(), fg_mask)
                             pass
 
