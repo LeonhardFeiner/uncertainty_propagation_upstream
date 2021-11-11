@@ -72,7 +72,7 @@ class MaskedL1Loss(torch.nn.L1Loss):
         return F.masked_l1_loss(input, target, mask, reduction=self.reduction)
 
 
-class MaskedAttenuatedL1Loss(torch.nn.MSELoss):
+class AttenuatedMaskedL1Loss(torch.nn.MSELoss):
     r"""Creates a criterion that measures the mean squared error (squared L2 norm) between
     each element in the input :math:`x` and target :math:`y`.
 
@@ -132,7 +132,7 @@ class MaskedAttenuatedL1Loss(torch.nn.MSELoss):
 
     def __init__(self, reduction: str = 'mean') -> None:
         assert reduction in ['mean', 'none']
-        super(MaskedAttenuatedL1Loss, self).__init__(None, None, reduction)
+        super(AttenuatedMaskedL1Loss, self).__init__(None, None, reduction)
 
     def forward(
         self, input: torch.Tensor, target: torch.Tensor, mask: torch.Tensor, log_b: torch.Tensor
@@ -208,7 +208,7 @@ class MaskedL2Loss(torch.nn.MSELoss):
 
 
 
-class MaskedAttenuatedL2Loss(torch.nn.MSELoss):
+class AttenuatedMaskedL2Loss(torch.nn.MSELoss):
     r"""Creates a criterion that measures the mean squared error (squared L2 norm) between
     each element in the input :math:`x` and target :math:`y`.
 
@@ -268,10 +268,9 @@ class MaskedAttenuatedL2Loss(torch.nn.MSELoss):
 
     def __init__(self, reduction: str = 'mean') -> None:
         assert reduction in ['mean', 'none']
-        super(MaskedAttenuatedL2Loss, self).__init__(None, None, reduction)
+        super(AttenuatedMaskedL2Loss, self).__init__(None, None, reduction)
 
     def forward(
         self, input: torch.Tensor, target: torch.Tensor, mask: torch.Tensor, log_sigma_squared: torch.Tensor
     ) -> torch.Tensor:
-        # return F.attenuated_masked_l2_loss(input, target, mask, log_sigma_squared, reduction=self.reduction)
-        return F.attenuated_l2_loss(input, target, log_sigma_squared, reduction=self.reduction)
+        return F.attenuated_masked_l2_loss(input, target, mask, log_sigma_squared, reduction=self.reduction)

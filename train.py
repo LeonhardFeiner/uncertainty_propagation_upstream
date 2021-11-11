@@ -99,12 +99,12 @@ def train(net, device, args):
     grad_scaler = torch.cuda.amp.GradScaler(enabled=args.amp)
     if args.l2:
         if args.aleatoric:
-            criterion = fastmri.losses.MaskedAttenuatedL2Loss()
+            criterion = fastmri.losses.AttenuatedMaskedL2Loss()
         else:
             criterion = fastmri.losses.MaskedL2Loss()
     else:
         if args.aleatoric:
-            criterion = fastmri.losses.MaskedAttenuatedL1Loss()
+            criterion = fastmri.losses.AttenuatedMaskedL1Loss()
         else:
             criterion = fastmri.losses.MaskedL1Loss()
         
@@ -168,7 +168,7 @@ def train(net, device, args):
                     output = net(*selected_input)
 
                     if args.aleatoric:
-                        output, raw_uncertainty = output                        
+                        output, raw_uncertainty = output
                         loss = criterion(output.abs(), gnd.abs(), fg_mask, raw_uncertainty)
 
                         if args.l2:
@@ -197,14 +197,15 @@ def train(net, device, args):
                 log_gnd_im = gnd[0].abs().flip(1)
                 log_fg_mask_im = fg_mask[0].flip(1)
                 log_im_list = [
-                    log_input_im * log_fg_mask_im / log_gnd_im.max(),
-                    log_output_im * log_fg_mask_im / log_gnd_im.max(),
-                    log_gnd_im * log_fg_mask_im / log_gnd_im.max(),
+                    log_input_im * log_fg_mask_im / log_gnd_im.max() / log_gnd_im.max(),
+                    log_output_im * log_fg_mask_im / log_gnd_im.max() / log_gnd_im.max(),
+                    log_gnd_im * log_fg_mask_im / log_gnd_im.max() / log_gnd_im.max(),
                 ]
                 if args.aleatoric:
-                    log_aleatoric = aleatoric_std[0].flip(1)               
-                
-                log_im = torch.cat(log_im_list, dim=2) / log_gnd_im.max()
+                    log_aleatoric = aleatoric_std[0].flip(1)   
+                    log_im_list += [log_aleatoric * log_fg_mask_im / log_aleatoric.max()]
+
+                log_im = torch.cat(log_im_list, dim=2)
                 log_im = torch.clamp_max(log_im, 1)
 
 
@@ -219,8 +220,6 @@ def train(net, device, args):
                 }
 
 
-                # if args.aleatoric:
-                #     log_dict['train/max_aleatoric'] = log_aleatoric.max()
                 # if args.epistemic:
                 #     log_dict['train/max_epistemic'] = log_aleatoric.max()
                 if global_step % 200 == 0:
@@ -268,8 +267,8 @@ def train(net, device, args):
                     if args.epistemic:
                         output_samples_raw = [net(*selected_input) for _ in range(args.num_samples)]
                         if args.aleatoric:
-                            output_samples_raw, log_sigma_squared_samples = zip(*output_samples_raw)
-                            log_sigma_squared = torch.mean(torch.stack(log_sigma_squared_samples), axis=0)  
+                            output_samples_raw, raw_uncertainty_samples = zip(*output_samples_raw)
+                            raw_uncertainty = torch.mean(torch.stack(raw_uncertainty_samples), axis=0)
 
                         output_samples = torch.stack(output_samples_raw)                    
                         output = torch.mean(output_samples, axis=0)
@@ -278,14 +277,19 @@ def train(net, device, args):
                     else:
                         output_raw = net(*selected_input)
                         if args.aleatoric:
-                            output, log_sigma_squared = output_raw                        
-                            # val_loss = criterion(output.abs(), gnd.abs(), fg_mask, log_sigma_squared)
+                            output, raw_uncertainty = output_raw                        
+                            # val_loss = criterion(output.abs(), gnd.abs(), fg_mask, raw_uncertainty)
 
                         else:
                             output = output_raw
                             # val_loss = criterion(output.abs(), gnd.abs(), fg_mask)
                             pass
 
+                    if args.aleatoric:
+                        if args.l2:
+                            aleatoric_std = torch.sqrt(torch.exp(raw_uncertainty))
+                        else:
+                            aleatoric_std = torch.exp(raw_uncertainty) * torch.sqrt(raw_uncertainty.new_tensor(2))
 
 
                     #val_loss = F_fastmri.masked_l1_loss(output.abs(), gnd.abs(), fg_mask)
@@ -304,8 +308,8 @@ def train(net, device, args):
                         log_gnd_im * log_fg_mask_im / log_gnd_im.max(),
                     ]
                     if args.aleatoric:
-                        log_aleatoric = torch.sqrt(torch.exp(log_sigma_squared[0])).flip(1)
-                        log_im_list += [log_aleatoric * log_fg_mask_im / log_aleatoric.max()]                       
+                        log_aleatoric = aleatoric_std[0].flip(1)
+                        log_im_list += [log_aleatoric * log_fg_mask_im / log_aleatoric.max()]
 
                     if args.epistemic:
                         log_epistemic = torch.sqrt(epistemic_var[0]).flip(1)

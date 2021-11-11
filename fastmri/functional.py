@@ -52,31 +52,12 @@ def masked_l2_loss(
     assert reduction in ['none', 'mean']
     batchsize = input.size()[0]
     mask_norm = mask.sum((-2,-1), keepdim=True)
-    squared_mask_norm = torch.square(torch.max(mask_norm, torch.ones_like(mask_norm)))
+    mask_norm = torch.max(mask_norm, torch.ones_like(mask_norm))
 
-    loss = F.mse_loss(input * mask, target * mask, reduction='none') / squared_mask_norm
+    loss = F.mse_loss(input * mask, target * mask, reduction='none') / mask_norm
 
     if reduction == 'mean':
         loss = loss.view(batchsize, -1).sum(-1).mean()
-    return loss
-
-def attenuated_l2_loss(
-    input: torch.Tensor,
-    target: torch.Tensor,
-    log_sigma_squared: torch.Tensor,
-    reduction: str = "mean",
-) -> torch.Tensor:
-    assert reduction in ['none', 'mean']
-    batchsize = input.size()[0]
-
-    loss = (
-        F.mse_loss(input, target, reduction='none') * torch.exp(-log_sigma_squared)
-        + log_sigma_squared * 0.5
-    )
-
-
-    if reduction == 'mean':
-        loss = loss.mean()
     return loss
 
 
@@ -91,11 +72,11 @@ def attenuated_masked_l2_loss(
     batchsize = input.size()[0]
 
     mask_norm = mask.sum((-2,-1), keepdim=True)
-    squared_mask_norm = torch.square(torch.max(mask_norm, torch.ones_like(mask_norm)))
+    mask_norm = torch.max(mask_norm, torch.ones_like(mask_norm))
 
-    loss = (
-        F.mse_loss(input * mask, target * mask, reduction='none') / squared_mask_norm * torch.exp(-log_sigma_squared)
-        + log_sigma_squared * 0.5 * mask / mask_norm
+    loss =  0.5 * (
+        F.mse_loss(input * mask, target * mask, reduction='none') / mask_norm * torch.exp(-log_sigma_squared)
+        + log_sigma_squared * mask / mask_norm
     )
 
     if reduction == 'mean':
