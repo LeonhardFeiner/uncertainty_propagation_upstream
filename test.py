@@ -11,7 +11,6 @@ from fastmri.models.dncn import DnCn
 from fastmri.models.unet import Unet
 from fastmri.models.snet import Snet
 from fastmri.utils import loadYaml
-import fastmri_dataloader
 from fastmri.data.fastmri_dataloader_th import FastmriCartesianDataset
 import fastmri.functional as F_fastmri
 from pathlib import Path
@@ -33,7 +32,21 @@ def get_args():
     parser.add_argument("--shared-params", action='store_true', help='Sharing paramters over cascades')
     parser.add_argument("--nc", type=int, default=10, help='Number of cascades')
     parser.add_argument("--nf", type=int, default=64, help='Num base features')
-
+    parser.add_argument("--dropout", type=float, default=0, help="Dropout probability applied after most conv layers")
+    parser.add_argument(
+        "--epistemic",  action='store_true',
+        help="Indicator whether network should model epistemic uncertainty. Needs dropout")
+    parser.add_argument(
+        "--num-samples", default=8, type=int,
+        help="number of samples should be drawn fore calculating epistemic uncertainty. Needs dropout")
+    parser.add_argument(
+        "--aleatoric",  action='store_true', help="Indicator whether network should model aleatoric uncertainty")
+    parser.add_argument(
+        "--combined-aleatoric",  action='store_true',
+        help="Indicator whether aleatoric prediction should use feature maps of every layer as input. Needs aleatoric")
+    parser.add_argument(
+        "--l2",  action='store_true',
+        help="Indicator whether to use l2 loss instead of l1 loss")
     return parser.parse_args()
     
 
@@ -71,11 +84,33 @@ def test_all(net, device, args):
                 inputs, outputs = fastmri.data.prepare_batch(batch, device)
 
                 x0 = inputs[0]
-                fg_mask = inputs[-1]
                 gnd = outputs[0]
 
-                output = net(*inputs[:-1]) # pass all inputs except fg_mask
-                output *= fg_mask
+                if config['use_fg_mask']:
+                    selected_input = inputs[:-1] # pass all inputs except fg_mask
+                    fg_mask = inputs[-1]
+
+                else:
+                    selected_input = inputs
+
+                output = net(*selected_input)
+                if args.aleatoric:
+                    output, raw_uncertainty = output
+                    # loss = criterion(output.abs(), gnd.abs(), fg_mask, raw_uncertainty)
+
+                    if args.l2:
+                        aleatoric_std = torch.sqrt(torch.exp(raw_uncertainty))
+                    else:
+                        aleatoric_std = torch.exp(raw_uncertainty) * torch.sqrt(raw_uncertainty.new_tensor(2))
+                        # sigma ** 2 = 2 * b ** 2
+                else:
+                    # loss = criterion(output.abs(), gnd.abs(), fg_mask)
+                    pass
+
+                if config['use_fg_mask']:
+                    output *= fg_mask
+                else:
+                    fg_mask = torch.ones_like(output.abs())
 
                 if args.cal_metrics:
                     l1, nmse, psnr, ssim = F_fastmri.evaluate(output.abs(), gnd.abs(), (-2,-1), fg_mask)
@@ -97,18 +132,19 @@ def test_all(net, device, args):
                                         ], dim=2) / log_gnd_im.max()
                     log_im = torch.clamp_max(log_im, 1)
                     
-                    if args.cal_metrics:
-                        experiment.log({
-                            'val/loss': l1,
-                            'val/nmse': nmse,
-                            'val/psnr': psnr,
-                            'val/ssim': ssim,
-                            'val/results': wandb.Image(log_im.float().cpu()),
-                        })
-                    else:
-                        experiment.log({
-                            'val/results': wandb.Image(log_im.float().cpu()),
-                        })
+                    if args.wandb:
+                        if args.cal_metrics:
+                            experiment.log({
+                                'val/loss': l1,
+                                'val/nmse': nmse,
+                                'val/psnr': psnr,
+                                'val/ssim': ssim,
+                                'val/results': wandb.Image(log_im.float().cpu()),
+                            })
+                        else:
+                            experiment.log({
+                                'val/results': wandb.Image(log_im.float().cpu()),
+                            })
 
                 if args.save_mat:
                     Path(save_dir).mkdir(parents=True, exist_ok=True)
@@ -117,12 +153,13 @@ def test_all(net, device, args):
                 pbar.update(x0.shape[0])
         
     if args.cal_metrics:
-        experiment.log({
-            'avg_nmse': avg_nmse,
-            'avg_l1': avg_l1,
-            'avg_psnr': avg_psnr,
-            'avg_ssim': avg_ssim
-        })
+        if args.wandb:
+            experiment.log({
+                'avg_nmse': avg_nmse,
+                'avg_l1': avg_l1,
+                'avg_psnr': avg_psnr,
+                'avg_ssim': avg_ssim
+            })
         logging.info(f'avg_l1: {avg_l1}')
         logging.info(f'avg_nmse: {avg_nmse}')
         logging.info(f'avg_psnr: {avg_psnr}')
@@ -137,8 +174,10 @@ if __name__ == '__main__':
     logging.info(f'Using device {device}')
     logging.info(args)
 
+    aleatoric = (("combined" if args.combined_aleatoric else "separate") if args.aleatoric else None)
+
     if args.model == 'dncn':
-        net = DnCn(regularizer=args.regularizer, shared_params=args.shared_params, nc=args.nc, nf=args.nf)
+        net = DnCn(regularizer=args.regularizer, shared_params=args.shared_params, nc=args.nc, nf=args.nf, dropout_probability=args.dropout, aleatoric=aleatoric, epistemic=args.epistemic)
     elif args.model == 'unet':
         net = Unet(in_chans=2, out_chans=2, chans=32, num_pool_layers=4)
     elif args.model == 'snet':
