@@ -118,10 +118,6 @@ def test_all(net, device, args):
                         aleatoric_std = torch.sqrt(torch.exp(raw_uncertainty))
                     else:
                         aleatoric_std = torch.exp(raw_uncertainty) * torch.sqrt(raw_uncertainty.new_tensor(2))
-                        # sigma ** 2 = 2 * b ** 2
-                else:
-                    # loss = criterion(output.abs(), gnd.abs(), fg_mask)
-                    pass
 
                 if config['use_fg_mask']:
                     output *= fg_mask
@@ -156,10 +152,6 @@ def test_all(net, device, args):
 
                     log_im = torch.cat(log_im_list, dim=2)
 
-                    log_im = torch.cat([log_input_im * log_fg_mask_im,
-                                        log_output_im * log_fg_mask_im,
-                                        log_gnd_im * log_fg_mask_im
-                                        ], dim=2) / log_gnd_im.max()
                     log_im = torch.clamp_max(log_im, 1)
                     
                     if args.wandb:
