@@ -94,11 +94,25 @@ def test_all(net, device, args):
                 else:
                     selected_input = inputs
 
-                output = net(*selected_input)
-                if args.aleatoric:
-                    output, raw_uncertainty = output
-                    # loss = criterion(output.abs(), gnd.abs(), fg_mask, raw_uncertainty)
+                if args.epistemic:
+                    output_samples_raw = [net(*selected_input) for _ in range(args.num_samples)]
+                    if args.aleatoric:
+                        output_samples_raw, raw_uncertainty_samples = zip(*output_samples_raw)
+                        raw_uncertainty = torch.mean(torch.stack(raw_uncertainty_samples), axis=0)
 
+                    output_samples = torch.stack(output_samples_raw)                    
+                    output = torch.mean(output_samples, axis=0)
+                    epistemic_var = torch.var(output_samples, axis=0)
+                else:
+                    output_raw = net(*selected_input)
+                    if args.aleatoric:
+                        output, raw_uncertainty = output_raw                        
+
+                    else:
+                        output = output_raw
+                        pass
+
+                if args.aleatoric:
                     if args.l2:
                         aleatoric_std = torch.sqrt(torch.exp(raw_uncertainty))
                     else:
@@ -126,6 +140,20 @@ def test_all(net, device, args):
                     log_output_im = output[0].abs().flip(1)
                     log_gnd_im = gnd[0].abs().flip(1)
                     log_fg_mask_im = fg_mask[0].flip(1)
+                    log_im_list = [
+                        log_input_im * log_fg_mask_im, # / log_gnd_im.max(),
+                        log_output_im * log_fg_mask_im,# / log_gnd_im.max(),
+                        log_gnd_im * log_fg_mask_im,# / log_gnd_im.max(),
+                    ]
+                    if args.aleatoric:
+                        log_aleatoric = aleatoric_std[0].flip(1)   
+                        log_im_list += [log_aleatoric * log_fg_mask_im] # / log_aleatoric.max()]
+
+                    if args.epistemic:
+                        log_epistemic = torch.sqrt(epistemic_var[0]).flip(1)
+                        log_im_list += [log_epistemic * log_fg_mask_im] # / log_epistemic.max()
+
+                    log_im = torch.cat(log_im_list, dim=2)
 
                     log_im = torch.cat([log_input_im * log_fg_mask_im,
                                         log_output_im * log_fg_mask_im,
@@ -150,6 +178,11 @@ def test_all(net, device, args):
                 if args.save_mat or args.save_pickle:
                     Path(save_dir).mkdir(parents=True, exist_ok=True)
                     result_dict =  {'recon':output, 'gnd': gnd}
+                    if args.aleatoric:
+                        result_dict['aleatoric'] = torch.square(aleatoric_std)
+                    if args.epistemic:
+                        result_dict['epistemic'] = epistemic_var
+                        
                     name = str(test_idx)
 
                 if args.save_mat:
