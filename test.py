@@ -25,6 +25,7 @@ def get_args():
     parser.add_argument("--cal_metrics", default=False)
     parser.add_argument("--wandb", default=False)
     parser.add_argument("--save_mat", default=False)
+    parser.add_argument("--save_pickle", default=False)
 
     parser.add_argument("--model", default='dncn', type=str)
     parser.add_argument("--num_workers", default=8, type=str)
@@ -60,7 +61,7 @@ def test_all(net, device, args):
     
     exp_id = args.ckpt_path.split('/')[-2]
 
-    if args.save_mat:
+    if args.save_mat or args.save_pickle:
         save_dir = Path('./test_results') / exp_id
 
     n_test = len(dataset)
@@ -146,9 +147,17 @@ def test_all(net, device, args):
                                 'val/results': wandb.Image(log_im.float().cpu()),
                             })
 
-                if args.save_mat:
+                if args.save_mat or args.save_pickle:
                     Path(save_dir).mkdir(parents=True, exist_ok=True)
-                    scio.savemat(save_dir / ('test_' + str(test_idx) + '.mat'), {'recon':output, 'gnd': gnd})
+                    result_dict =  {'recon':output, 'gnd': gnd}
+                    name = str(test_idx)
+
+                if args.save_mat:
+                    scio.savemat(save_dir / ('test_' + name + '.mat'), result_dict)
+                if args.save_pickle:
+                    result_dict = {key: value.cpu().numpy() for key, value in result_dict.items()}
+                    with open(save_dir / ('test_' + name + '.pickle'), "wb") as file:
+                        pickle.dump(result_dict, file)
 
                 pbar.update(x0.shape[0])
         
