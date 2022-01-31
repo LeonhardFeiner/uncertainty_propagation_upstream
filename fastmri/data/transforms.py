@@ -25,9 +25,10 @@ class CenterCrop():
 
 class ToTorchIO():
     ''' Move to merlin!'''
-    def __init__(self, input_keys, output_keys):
+    def __init__(self, input_keys, output_keys, extra_keys=None):
         self.input_keys = input_keys
         self.output_keys = output_keys
+        self.extra_keys = extra_keys
 
     def __call__(self, sample):
         import torch
@@ -37,7 +38,12 @@ class ToTorchIO():
             inputs.append(torch.from_numpy(sample[key]))
         for key in self.output_keys:
             outputs.append(torch.from_numpy(sample[key]))
-        return inputs, outputs
+
+        if self.extra_keys is None:
+            return inputs, outputs
+        else:
+            extra_data =  [sample[key] for key in self.extra_keys]
+            return inputs, outputs, extra_data
 
 class Magnitude():
     def __init__(self, keys):
@@ -460,7 +466,7 @@ class LoadForegroundMask():
 #         raise ValueError(f'Mode {mode} does not exist!')
 #     return transform
 
-def get_torch_transform(mode, config):
+def get_torch_transform(mode, config, extra_keys=None):
     #from merlinth.utils import ToTorchIO
     fg_mask = ['fg_mask'] if 'use_fg_mask' in config and config['use_fg_mask'] else []
     if mode == 'singlecoil_train':
@@ -470,7 +476,7 @@ def get_torch_transform(mode, config):
                     GeneratePatches(**config[f'{mode}_ds']['patch'], multicoil=False),
                     ComputeInit(multicoil=False),
                     Transpose([('noisy', (0, 3, 1, 2)), ('reference',  (0, 3, 1, 2))]),
-                    ToTorchIO(['noisy', 'kspace', 'mask'] + fg_mask, ['reference'])
+                    ToTorchIO(['noisy', 'kspace', 'mask'] + fg_mask, ['reference'], extra_keys)
                     ]
     elif mode == 'singlecoil_val':
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
@@ -479,7 +485,7 @@ def get_torch_transform(mode, config):
                     GeneratePatches(**config[f'{mode}_ds']['patch'], multicoil=False),
                     ComputeInit(multicoil=False),
                     Transpose([('noisy', (0, 3, 1, 2)), ('reference',  (0, 3, 1, 2))]),
-                    ToTorchIO(['noisy', 'kspace', 'mask'] + fg_mask, ['reference'])
+                    ToTorchIO(['noisy', 'kspace', 'mask'] + fg_mask, ['reference'], extra_keys)
                     ]
 
     elif mode == 'singlecoil_test':
@@ -497,7 +503,7 @@ def get_torch_transform(mode, config):
                     CenterCrop(['noisy']),
                     Transpose([('noisy', (0, 3, 1, 2)), ('reference',  (0, 3, 1, 2))]),
                     #TODO normalization
-                    ToTorchIO(['noisy',], ['reference'])
+                    ToTorchIO(['noisy',], ['reference'], extra_keys)
                     ]
     elif mode == 'denoising_singlecoil_val':
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
@@ -506,7 +512,7 @@ def get_torch_transform(mode, config):
                     ComputeInit(multicoil=False),
                     CenterCrop(['noisy']),
                     Transpose([('noisy', (0, 3, 1, 2)), ('reference',  (0, 3, 1, 2))]),
-                    ToTorchIO(['noisy'], ['reference'])
+                    ToTorchIO(['noisy'], ['reference'], extra_keys)
                     ]
     elif mode == 'denoising_singlecoil_test':
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
@@ -524,7 +530,7 @@ def get_torch_transform(mode, config):
                     GeneratePatches(**config[f'{mode}_ds']['patch'], multicoil=True),
                     ComputeInit(multicoil=True),
                     Transpose([('noisy', (0, 4, 1, 3, 2)), ('reference',  (0, 4, 1, 3, 2))]),
-                    ToTorchIO(['noisy', 'kspace', 'mask', 'smaps'] + fg_mask, ['reference'])
+                    ToTorchIO(['noisy', 'kspace', 'mask', 'smaps'] + fg_mask, ['reference'], extra_keys)
                     ]
     elif mode == 'multicoil_val':
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
@@ -534,7 +540,7 @@ def get_torch_transform(mode, config):
                     GeneratePatches(**config[f'{mode}_ds']['patch'], multicoil=True),
                     ComputeInit(multicoil=True),
                     Transpose([('noisy', (0, 4, 1, 3, 2)), ('reference',  (0, 4, 1, 3, 2))]),
-                    ToTorchIO(['noisy', 'kspace', 'mask', 'smaps'] + fg_mask, ['reference'])
+                    ToTorchIO(['noisy', 'kspace', 'mask', 'smaps'] + fg_mask, ['reference'], extra_keys)
                     ]
     elif mode == 'multicoil_test':
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],

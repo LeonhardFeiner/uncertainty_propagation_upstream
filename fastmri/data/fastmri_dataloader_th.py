@@ -16,9 +16,10 @@ class FastmriCartesianDataset(FastmriCartesianDatasetBase, torch.utils.data.Data
         self,
         config,
         mode,
+        extra_keys=None,
     ):
         super().__init__(config, mode)
-        self.transform = torchvision.transforms.Compose(transforms.get_torch_transform(mode, config))
+        self.transform = torchvision.transforms.Compose(transforms.get_torch_transform(mode, config, extra_keys))
         
 
     def __len__(self):

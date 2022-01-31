@@ -13,8 +13,8 @@ def to_device(inputs, device):
         return inputs.to(device)
 
 def prepare_batch(batch, device):
-    inputs, outputs = batch
-    return to_device(squeeze_batchdim(inputs), device), to_device(squeeze_batchdim(outputs), device)
+    inputs, outputs, *other = batch
+    return (to_device(squeeze_batchdim(inputs), device), to_device(squeeze_batchdim(outputs), device), *other)
 
 def np_ensure_complex64(x):
     """

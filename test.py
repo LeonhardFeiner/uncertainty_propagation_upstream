@@ -56,7 +56,7 @@ def test_all(net, device, args):
     config_path = './config.yml'
     config = loadYaml(config_path, 'BaseExperiment')
     config['batch_size'] = 1
-    dataset = FastmriCartesianDataset(config=config, mode=args.mode)
+    dataset = FastmriCartesianDataset(config=config, mode=args.mode, extra_keys=["fname"])
     loader_args = dict(batch_size=1, num_workers=args.num_workers, pin_memory=True)
     dataloader = DataLoader(dataset, shuffle=False, **loader_args)
     
@@ -83,7 +83,7 @@ def test_all(net, device, args):
         with tqdm(total=n_test, desc=f'Test case {test_idx + 1}/{n_test}', unit='img') as pbar:
             for batch in dataloader:
                 test_idx += 1
-                inputs, outputs = fastmri.data.prepare_batch(batch, device)
+                inputs, outputs, (filename,) = fastmri.data.prepare_batch(batch, device)
 
                 x0 = inputs[0]
                 gnd = outputs[0]
@@ -176,7 +176,7 @@ def test_all(net, device, args):
                     if args.epistemic:
                         result_dict['epistemic'] = epistemic_var
                         
-                    name = str(test_idx)
+                    name = Path(filename[0]).stem
 
                 if args.save_mat:
                     scio.savemat(save_dir / ('test_' + name + '.mat'), result_dict)
