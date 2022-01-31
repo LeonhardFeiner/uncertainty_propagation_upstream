@@ -75,6 +75,7 @@ class GeneratePatches():
             k_offset = 0
             k_fe = np_kspace.shape[-2]
 
+        patch_ny = min(patch_ny, k_fe)
         # extract patch in Ny direction
         max_ny = k_fe - patch_ny - offset_y + 1
 
