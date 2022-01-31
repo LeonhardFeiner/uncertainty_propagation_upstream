@@ -56,7 +56,7 @@ def test_all(net, device, args):
     config = loadYaml(config_path, 'BaseExperiment')
     config['batch_size'] = 1
     dataset = FastmriCartesianDataset(config=config, mode=args.mode)
-    loader_args = dict(batch_size=1, num_workers=8, pin_memory=True)
+    loader_args = dict(batch_size=1, num_workers=args.num_workers, pin_memory=True)
     dataloader = DataLoader(dataset, shuffle=False, **loader_args)
     
     exp_id = args.ckpt_path.split('/')[-2]
