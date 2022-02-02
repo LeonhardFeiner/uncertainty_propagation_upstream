@@ -1,0 +1,8 @@
+filename,nPE,acc,num_low_freq
+/home/feiner/datasets/adni/data/singlecoil/train/ADNI_116_S_6133_Accelerated_Sagittal_MPRAGE_ND_S916892_I1281567.h5,176,0,0
+/home/feiner/datasets/adni/data/singlecoil/train/ADNI_003_S_6606_Accelerated_Sagittal_MPRAGE_S910695_I1273702.h5,208,0,0
+/home/feiner/datasets/adni/data/singlecoil/train/ADNI_141_S_6178_Accelerated_Sagittal_MPRAGE_ND_S657253_I961814.h5,176,0,0
+/home/feiner/datasets/adni/data/singlecoil/train/ADNI_022_S_6013_Sagittal_3D_Accelerated_MPRAGE_S806245_I1142379.h5,176,0,0
+/home/feiner/datasets/adni/data/singlecoil/train/ADNI_003_S_6257_Accelerated_Sagittal_MPRAGE_S667501_I974338.h5,208,0,0
+/home/feiner/datasets/adni/data/singlecoil/train/ADNI_014_S_6145_Accelerated_Sagittal_MPRAGE_S645977_I948081.h5,176,0,0
+/home/feiner/datasets/adni/data/singlecoil/train/ADNI_068_S_0802_Accelerated_Sagittal_MPRAGE_S587654_I878974.h5,208,0,0
