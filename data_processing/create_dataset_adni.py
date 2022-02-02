@@ -99,13 +99,14 @@ for subset_name, nifti_tuples in sets.items():
           image = nib.load(nifti_path)
 
           array = np.squeeze(image.get_fdata(), -1).T
-          noise = complex_randn(*array.shape, random_gen=rng) * (2 ** 4)
+          noise = complex_randn(*array.shape, random_gen=rng) * (2 ** 6)
           transformed = fft2c(array) + noise
           
           with open(xml_path, "r") as f:
                xml = xmltodict.parse(f.read())
 
 
+          enc_info['nPE'].append(transformed.shape[-1])
           acc_info['acc'].append(0)
           acc_info['num_low_freq'].append(0)
 
