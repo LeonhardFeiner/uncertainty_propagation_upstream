@@ -29,7 +29,7 @@ def get_args():
     parser.add_argument("--save_pickle", default=False)
 
     parser.add_argument("--model", default='dncn', type=str)
-    parser.add_argument("--num_workers", default=8, type=str)
+    parser.add_argument("--num_workers", default=8, type=int)
     parser.add_argument("--regularizer", default='Real2chCNN', type=str)
     parser.add_argument("--shared-params", action='store_true', help='Sharing paramters over cascades')
     parser.add_argument("--nc", type=int, default=10, help='Number of cascades')
