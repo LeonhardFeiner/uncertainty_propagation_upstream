@@ -197,9 +197,9 @@ def train(net, device, args):
                 log_gnd_im = gnd[0].abs().flip(1)
                 log_fg_mask_im = fg_mask[0].flip(1)
                 log_im_list = [
-                    log_input_im * log_fg_mask_im / log_gnd_im.max() / log_gnd_im.max(),
-                    log_output_im * log_fg_mask_im / log_gnd_im.max() / log_gnd_im.max(),
-                    log_gnd_im * log_fg_mask_im / log_gnd_im.max() / log_gnd_im.max(),
+                    log_input_im * log_fg_mask_im / log_gnd_im.max(),
+                    log_output_im * log_fg_mask_im / log_gnd_im.max(),
+                    log_gnd_im * log_fg_mask_im / log_gnd_im.max(),
                 ]
                 if args.aleatoric:
                     log_aleatoric = aleatoric_std[0].flip(1)   
