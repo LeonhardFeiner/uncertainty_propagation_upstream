@@ -478,7 +478,7 @@ def get_torch_transform(mode, config, extra_keys=None):
                     Transpose([('noisy', (0, 3, 1, 2)), ('reference',  (0, 3, 1, 2))]),
                     ToTorchIO(['noisy', 'kspace', 'mask'] + fg_mask, ['reference'], extra_keys)
                     ]
-    elif mode == 'singlecoil_val':
+    elif mode == 'singlecoil_val' or mode == 'singlecoil_test':
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
                                                         accelerations=config['accelerations'],
                                                         is_train=False),
@@ -557,7 +557,8 @@ def get_torch_transform(mode, config, extra_keys=None):
     if config['use_fg_mask']:
         transform.insert(1, LoadForegroundMask(config[f'{mode}_ds']['fg_dir']),)
     elif 'test' in mode:
-        transform.append(InitForegroundMask())
+        transform.insert(-1, InitForegroundMask())
+        # transform.append(InitForegroundMask())
     else:
         transform.insert(-1, InitForegroundMask())
 
