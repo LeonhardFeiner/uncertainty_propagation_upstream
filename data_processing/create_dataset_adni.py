@@ -188,7 +188,7 @@ xml_df = pd.DataFrame(
     [get_dataframe(xml_path) for xml_path in args.original_data_path.glob("*.xml")]
 )
 
-input_df["diagnose"] = input_df.apply(lambda row: get_diag(row), axis=1)
+input_df["diagnosis_cleaned"] = input_df.apply(lambda row: get_diag(row), axis=1)
 date_column_names = ["USERDATE", "USERDATE2", "EXAMDATE", "update_stamp"]
 input_df[date_column_names] = input_df[date_column_names].applymap(pd.Timestamp)
 df_merged = input_df.merge(
