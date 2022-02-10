@@ -199,19 +199,29 @@ df_merged["time_delta"] = abs(df_merged.date_acquired - df_merged.EXAMDATE)
 
 df_filtered = df_merged.iloc[df_merged.groupby("xml_path").time_delta.idxmin().tolist()]
 df_filtered = df_filtered[df_filtered.time_delta.dt.days < 150]
-if args.do_split:
-    ptids = df_filtered.PTID.unique()
-    rng = np.random.default_rng(0)
-    rng.shuffle(ptids)
 
-    split_positions = tuple((np.array([0.6, 0.8]) * len(ptids)).astype(int))
-    train, val, test = np.split(ptids, split_positions)
-    split_dict = dict(train=train.tolist(), val=val.tolist(), test=test.tolist())
+ptids = df_filtered.PTID.unique()
+rng = np.random.default_rng(0)
+rng.shuffle(ptids)
+
+split_positions = tuple((np.array([0.6, 0.8]) * len(ptids)).astype(int))
+train, val, test = np.split(ptids, split_positions)
+split_dict = dict(train=train.tolist(), val=val.tolist(), test=test.tolist())
+
+if args.do_split:
     with open(Path(args.split_file).expanduser(), "w") as file:
         json.dump(split_dict, file)
 else:
+    original_split_dict = split_dict
     with open(Path(args.split_file).expanduser(), "r") as file:
         split_dict = json.load(file)
+
+    equal_splits = ', '.join(
+        key
+        for key, id_list in split_dict.items()
+        if np.array_equal(original_split_dict[key], id_list)
+    )    
+    print(f"splits {equal_splits or 'none'} would stay equal if splits were redone.")
 
 for subset, id_list in split_dict.items():
     df_filtered.loc[df_filtered.PTID.isin(id_list),"subset"] = subset
@@ -221,9 +231,6 @@ assert 1 == df_filtered.groupby("PTID").subset.nunique().max()
 
 for subset_name in split_dict.keys():
     df_subset = df_filtered[df_filtered.subset == subset_name]
-# generate the file names
-# image_names = sorted([os.path.join(args.dataset, f) for f in os.listdir(os.path.join(args.data_path, args.dataset)) if f.endswith(image_type)])
-
     # init dicts for infos that will be extracted from the dataset
     img_info = {'filename' : []}
     acq_info = {}
@@ -235,10 +242,7 @@ for subset_name in split_dict.keys():
     subset_path.mkdir(parents=True, exist_ok=True)
 
 
-    for row in tqdm(df_subset.to_dict("records")):
-        
-        xml_path = row["xml_path"]
-        image_path = row["image_path"]
+    for xml_path, image_path in tqdm(df_subset[["xml_path", "image_path"]].itertuples(index=False)):
         image = nib.load(image_path)
 
         array = np.squeeze(image.get_fdata(), -1).T
@@ -259,7 +263,7 @@ for subset_name in split_dict.keys():
             hf.create_dataset('kspace', data=transformed, compression="gzip")
             hf.create_dataset('reconstruction_esc', data=array, compression="gzip")
 
-    data_info = {**img_info, **acq_info, **enc_info, **acc_info, **seq_info, **row}
+    data_info = {**img_info, **acq_info, **enc_info, **acc_info, **seq_info, **df_subset.to_dict("list")}
 
     # convert to pandas
     df = pd.DataFrame(data_info)
