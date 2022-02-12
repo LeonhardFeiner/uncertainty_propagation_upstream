@@ -55,7 +55,7 @@ def get_args():
 def test_all(net, device, args):
     config_path = './config.yml'
     config = loadYaml(config_path, 'BaseExperiment')
-    config['batch_size'] = 1
+    # config['batch_size'] = 1
     dataset = FastmriCartesianDataset(config=config, mode=args.mode, extra_keys=["fname"])
     loader_args = dict(batch_size=1, num_workers=args.num_workers, pin_memory=True)
     dataloader = DataLoader(dataset, shuffle=False, **loader_args)
@@ -81,6 +81,7 @@ def test_all(net, device, args):
     avg_ssim = 0
     with torch.no_grad():
         with tqdm(total=n_test, desc=f'Test case {test_idx + 1}/{n_test}', unit='img') as pbar:
+            last_filename = None
             for batch in dataloader:
                 test_idx += 1
                 inputs, outputs, (filename,) = fastmri.data.prepare_batch(batch, device)
@@ -172,20 +173,30 @@ def test_all(net, device, args):
                     Path(save_dir).mkdir(parents=True, exist_ok=True)
                     result_dict =  {'recon':output, 'gnd': gnd}
                     if args.aleatoric:
-                        result_dict['aleatoric'] = torch.square(aleatoric_std)
+                        result_dict['aleatoric_std'] = aleatoric_std
                     if args.epistemic:
-                        result_dict['epistemic'] = epistemic_var
+                        result_dict['epistemic_std'] = torch.sqrt(epistemic_var)
                         
                     name = Path(filename[0]).stem
 
-                if args.save_mat:
-                    scio.savemat(save_dir / ('test_' + name + '.mat'), result_dict)
-                if args.save_pickle:
-                    result_dict = {key: value.cpu().numpy() for key, value in result_dict.items()}
-                    with open(save_dir / ('test_' + name + '.pickle'), "wb") as file:
-                        pickle.dump(result_dict, file)
-
-                pbar.update(x0.shape[0])
+                if args.save_mat or args.save_pickle:
+                    if last_filename == filename:
+                        full_result_dict = {
+                            key: torch.concat((last, result_dict[key].cpu()))
+                            for key, last in full_result_dict.items()
+                        }
+                    else:
+                        if last_filename is not None:
+                            if args.save_mat:
+                                scio.savemat(save_dir / ('test_' + name + '.mat'), full_result_dict)
+                            if args.save_pickle:
+                                full_result_dict = {key: value.numpy() for key, value in full_result_dict.items()}
+                                with open(save_dir / ('test_' + name + '.pickle'), "wb") as file:
+                                    pickle.dump(full_result_dict, file)
+                        
+                        full_result_dict = {key: value.cpu() for key, value in result_dict.items()}
+                last_filename = filename
+                pbar.update(1)
         
     if args.cal_metrics:
         if args.wandb:
