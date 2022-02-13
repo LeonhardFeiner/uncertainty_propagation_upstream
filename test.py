@@ -84,7 +84,7 @@ def test_all(net, device, args):
             last_filename = None
             for batch in dataloader:
                 test_idx += 1
-                inputs, outputs, (filename,) = fastmri.data.prepare_batch(batch, device)
+                inputs, outputs, ((filename,),) = fastmri.data.prepare_batch(batch, device)
 
                 x0 = inputs[0]
                 gnd = outputs[0]
@@ -177,8 +177,6 @@ def test_all(net, device, args):
                     if args.epistemic:
                         result_dict['epistemic_std'] = torch.sqrt(epistemic_var)
                         
-                    name = Path(filename[0]).stem
-
                 if args.save_mat or args.save_pickle:
                     if last_filename == filename:
                         full_result_dict = {
@@ -187,6 +185,7 @@ def test_all(net, device, args):
                         }
                     else:
                         if last_filename is not None:
+                            name = Path(last_filename).stem
                             if args.save_mat:
                                 scio.savemat(save_dir / ('test_' + name + '.mat'), full_result_dict)
                             if args.save_pickle:
@@ -197,6 +196,14 @@ def test_all(net, device, args):
                         full_result_dict = {key: value.cpu() for key, value in result_dict.items()}
                 last_filename = filename
                 pbar.update(1)
+
+            name = Path(last_filename).stem
+            if args.save_mat:
+                scio.savemat(save_dir / ('test_' + name + '.mat'), full_result_dict)
+            if args.save_pickle:
+                full_result_dict = {key: value.numpy() for key, value in full_result_dict.items()}
+                with open(save_dir / ('test_' + name + '.pickle'), "wb") as file:
+                    pickle.dump(full_result_dict, file)
         
     if args.cal_metrics:
         if args.wandb:
