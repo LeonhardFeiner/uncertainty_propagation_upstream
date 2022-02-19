@@ -7,7 +7,8 @@ Department of Computing, Imperial College London, London, United Kingdom
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
-
+# %%
+from dataclasses import dataclass
 from genericpath import exists
 import os
 import pandas as pd
@@ -26,49 +27,55 @@ import json
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-     '--data-path', type=pathlib.Path, required=True,
-     help='Path to the dataset',
+     "--data-path", type=pathlib.Path, required=True,
+     help="Path to the dataset",
 )
 
 parser.add_argument(
-     '--original-data-path', type=pathlib.Path, required=True,
-     help='Path to the dataset',
+     "--original-data-path", type=pathlib.Path, required=True,
+     help="Path to the dataset",
 )
 
 
 parser.add_argument(
-     '--csv-file', type=pathlib.Path, required=True,
-     help='Path to the csv file',
+     "--csv-file", type=pathlib.Path, required=True,
+     help="Path to the csv file",
 )
 
 parser.add_argument(
-     '--input-csv-file', type=pathlib.Path, required=True,
-     help='Path to the csv file',
+     "--input-csv-file-dir", type=pathlib.Path, required=True,
+     help="Path to the csv file",
 )
 
 parser.add_argument(
-     '--split-file', type=pathlib.Path, required=True,
-     help='Path to the json file',
+     "--split-file", type=pathlib.Path, required=True,
+     help="Path to the json file",
 )
 
 parser.add_argument(
-     '--do-split', type=bool, default=False,
-     help='Path to the csv file',
+     "--do-split", type=bool, default=False,
+     help="Path to the csv file",
 )
 
 parser.add_argument(
-     '--dataset', type=str, required=True,
-     help='Dataset for which the csv file should be generated.'
+     "--dataset", type=str, required=True,
+     help="Dataset for which the csv file should be generated."
 )
 
 
+# @dataclass
+# class ReplaceArgs:
+#     data_path = Path("/home/feiner/datasets/")
+#     dataset = "adni/data/singlecoil"
+#     original_data_path =Path("/home/feiner/datasets/adni/adni/ADNI")
+#     input_csv_file_dir=Path("/home/feiner/datasets/adni") #DXSUM_PDXCONV_ADNIALL.csv
+#     split_file=Path("../datasets/singlecoil_adni_split.json").resolve()
+#     csv_file=Path("../datasets/singlecoil_adni").resolve()
+#     do_split=True
+
+# args = ReplaceArgs()
 
 args = parser.parse_args()
-
-# image_type = '.h5'
-
-# print(f'Create dataset file for {args.dataset}')
-# output_name = f'{args.dataset}.csv'
 
 
 regex = re.compile(r"ADNI_(?P<first_part>\d{3}[_]S[_]\d{4})[_](?P<second_part>(?:\w|[-])*)[_](?P<third_part>\w*[_]\w*)\Z")
@@ -182,15 +189,27 @@ def get_diag(row):
 
 dataset_path = Path(args.data_path) / args.dataset 
 
+# %%
+csv_dir = Path(args.input_csv_file_dir)
 
-input_df = pd.read_csv(args.input_csv_file)
+input_df = pd.read_csv(csv_dir / "DXSUM_PDXCONV_ADNIALL.csv")
+volume_df = pd.read_csv(csv_dir / "FOXLABBSI_01_25_22.csv")
+other_df = pd.read_csv(csv_dir / "idaSearch_2_18_2022.csv")
+
+# %%
 xml_df = pd.DataFrame(
     [get_dataframe(xml_path) for xml_path in args.original_data_path.glob("*.xml")]
 )
-
-input_df["diagnosis_cleaned"] = input_df.apply(lambda row: get_diag(row), axis=1)
+other_df["Study Date"] = other_df["Study Date"].apply(pd.Timestamp)
 date_column_names = ["USERDATE", "USERDATE2", "EXAMDATE", "update_stamp"]
+input_df["diagnosis_cleaned"] = input_df.apply(lambda row: get_diag(row), axis=1)
 input_df[date_column_names] = input_df[date_column_names].applymap(pd.Timestamp)
+
+date_column_names_volume = ["EXAMDATE", "RUNDATE", "update_stamp"]
+volume_df[date_column_names_volume] = volume_df[date_column_names_volume].applymap(pd.Timestamp)
+# %%
+
+
 df_merged = input_df.merge(
     xml_df, how="left", left_on="PTID", right_on="subject_identifier"
 )
@@ -199,14 +218,36 @@ df_merged["time_delta"] = abs(df_merged.date_acquired - df_merged.EXAMDATE)
 
 df_filtered = df_merged.iloc[df_merged.groupby("xml_path").time_delta.idxmin().tolist()]
 df_filtered = df_filtered[df_filtered.time_delta.dt.days < 150]
+# %%
 
-ptids = df_filtered.PTID.unique()
+df_merged2 = df_filtered.merge(other_df,left_on="PTID", right_on="Subject ID")
+df_merged2["time_delta2"] = abs(df_merged2["Study Date"] - df_merged2.date_acquired)
+
+df_filtered2 = df_merged2.iloc[df_merged2.groupby("xml_path").time_delta2.idxmin().tolist()]
+df_filtered2 = df_filtered2[df_filtered2.time_delta2.dt.days < 150]
+
+# %%
+df_merged3 = df_filtered2.merge(volume_df, on=["RID", "VISCODE", "VISCODE2"],how="outer")
+df_merged3["time_delta3"] = abs(df_merged3.EXAMDATE_x - df_merged3.EXAMDATE_y)
+df_merged3["time_delta3b"] = df_merged3["time_delta3"].fillna(pd.Timedelta(days=365))
+df_filtered3 = df_merged3.iloc[df_merged3.groupby("xml_path").time_delta3b.idxmin().tolist()]
+# df_filtered3 = df_merged3.iloc[df_merged3.loc[:"EXAMDATE_y"].isna().sum(1).groupby(df_merged3["xml_path"]).idxmin().tolist()]
+df_filtered3 = df_filtered3[(df_filtered3.time_delta3.dt.days < 150) | pd.isna(df_filtered3.time_delta3.dt.days)]
+
+
+df_to_process = df_filtered3
+# %%
+
+ptids = df_to_process.PTID.unique()
 rng = np.random.default_rng(0)
 rng.shuffle(ptids)
 
-split_positions = tuple((np.array([0.6, 0.8]) * len(ptids)).astype(int))
-train, val, test = np.split(ptids, split_positions)
-split_dict = dict(train=train.tolist(), val=val.tolist(), test=test.tolist())
+splits = dict(train0=0.36,val0=0.04,train1=0.36,val1=0.04,test=0.2)
+assert np.isclose(sum(splits.values()), 1)
+split_positions = (np.cumsum(list(splits.values()))[:-1] * len(ptids)).astype(int)
+split_id_arrays = np.split(ptids, split_positions)
+split_id_lists = [id_array.tolist() for id_array in split_id_arrays]
+split_dict = dict(zip(splits.keys(), split_id_lists))
 
 if args.do_split:
     with open(Path(args.split_file).expanduser(), "w") as file:
@@ -216,7 +257,7 @@ else:
     with open(Path(args.split_file).expanduser(), "r") as file:
         split_dict = json.load(file)
 
-    equal_splits = ', '.join(
+    equal_splits = ", ".join(
         key
         for key, id_list in split_dict.items()
         if np.array_equal(original_split_dict[key], id_list)
@@ -224,19 +265,20 @@ else:
     print(f"splits {equal_splits or 'none'} would stay equal if splits were redone.")
 
 for subset, id_list in split_dict.items():
-    df_filtered.loc[df_filtered.PTID.isin(id_list),"subset"] = subset
+    df_to_process.loc[df_to_process.PTID.isin(id_list),"subset"] = subset
 
-assert 1 == df_filtered.groupby("PTID").subset.nunique().max()
+assert 1 == df_to_process.groupby("PTID").subset.nunique().max()
 
 
+# %%
 for subset_name in split_dict.keys():
-    df_subset = df_filtered[df_filtered.subset == subset_name]
+    df_subset = df_to_process[df_to_process.subset == subset_name]
     # init dicts for infos that will be extracted from the dataset
-    img_info = {'filename' : []}
-    acq_info = {}
+    img_info = {"filename" : []}
+    acq_info = {"has_nan":[], "has_zero_slices":[], "has_zero_only":[]}
     seq_info = {}
-    enc_info = {'nPE' : []}
-    acc_info = {'acc' : [], 'num_low_freq' : []}
+    enc_info = {"nPE" : []}
+    acc_info = {"acc" : [], "num_low_freq" : []}
 
     subset_path = dataset_path / subset_name
     subset_path.mkdir(parents=True, exist_ok=True)
@@ -252,16 +294,19 @@ for subset_name in split_dict.keys():
         with open(xml_path, "r") as f:
             xml = xmltodict.parse(f.read())
 
+        acq_info["has_nan"].append(np.isnan(array).any() or np.isnan(transformed).any())
+        acq_info["has_zero_only"].append(np.max(array) <= 0) # or np.max(transformed) <= 0)
+        acq_info["has_zero_slices"].append((np.max(array, (-2, -1)) <= 0).any()) # or np.max(transformed, (-2, -1)) <= 0)
 
-        enc_info['nPE'].append(transformed.shape[-1])
-        acc_info['acc'].append(0)
-        acc_info['num_low_freq'].append(0)
+        enc_info["nPE"].append(transformed.shape[-1])
+        acc_info["acc"].append(0)
+        acc_info["num_low_freq"].append(0)
 
         file_name = subset_path / (xml_path.stem + ".h5")
         img_info["filename"].append(file_name)
         with h5py.File(file_name, "w") as hf:
-            hf.create_dataset('kspace', data=transformed, compression="gzip")
-            hf.create_dataset('reconstruction_esc', data=array, compression="gzip")
+            hf.create_dataset("kspace", data=transformed, compression="gzip")
+            hf.create_dataset("reconstruction_esc", data=array, compression="gzip")
 
     data_info = {**img_info, **acq_info, **enc_info, **acc_info, **seq_info, **df_subset.to_dict("list")}
 
@@ -271,6 +316,8 @@ for subset_name in split_dict.keys():
 
     # save to output
     csv_file = args.csv_file.parent / f"{args.csv_file.name}_{subset_name}.csv"
-    print(f'Save csv file to {csv_file}')
+    print(f"Save csv file to {csv_file}")
     csv_file.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(csv_file, index=False)
+
+# %%
