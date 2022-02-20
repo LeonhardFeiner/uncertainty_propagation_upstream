@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
 import logging
 import sys
-from numpy.lib.npyio import save
+import numpy as np
 import torch
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
@@ -27,6 +27,7 @@ def get_args():
     parser.add_argument("--wandb", default=False)
     parser.add_argument("--save_mat", default=False)
     parser.add_argument("--save_pickle", default=False)
+    parser.add_argument("--save_numpy", default=False)
 
     parser.add_argument("--model", default='dncn', type=str)
     parser.add_argument("--num_workers", default=8, type=int)
@@ -62,7 +63,7 @@ def test_all(net, device, args):
     
     exp_id = args.ckpt_path.split('/')[-2]
 
-    if args.save_mat or args.save_pickle:
+    if args.save_mat or args.save_pickle or args.save_numpy:
         save_dir = Path('./test_results') / exp_id
 
     n_test = len(dataset)
@@ -169,7 +170,7 @@ def test_all(net, device, args):
                                 'val/results': wandb.Image(log_im.float().cpu()),
                             })
 
-                if args.save_mat or args.save_pickle:
+                if args.save_mat or args.save_pickle or args.save_numpy:    
                     Path(save_dir).mkdir(parents=True, exist_ok=True)
                     result_dict =  {'recon':output, 'gnd': gnd}
                     if args.aleatoric:
@@ -177,7 +178,6 @@ def test_all(net, device, args):
                     if args.epistemic:
                         result_dict['epistemic_std'] = torch.sqrt(epistemic_var)
                         
-                if args.save_mat or args.save_pickle:
                     if last_filename == filename:
                         full_result_dict = {
                             key: torch.concat((last, result_dict[key].cpu()))
@@ -186,12 +186,15 @@ def test_all(net, device, args):
                     else:
                         if last_filename is not None:
                             name = Path(last_filename).stem
+                            full_result_dict = {key: value.numpy() for key, value in full_result_dict.items()}
+
                             if args.save_mat:
-                                scio.savemat(save_dir / ('test_' + name + '.mat'), full_result_dict)
+                                scio.savemat(save_dir / ('test_' + name + '.mat'), full_result_dict)                            
                             if args.save_pickle:
-                                full_result_dict = {key: value.numpy() for key, value in full_result_dict.items()}
                                 with open(save_dir / ('test_' + name + '.pickle'), "wb") as file:
                                     pickle.dump(full_result_dict, file)
+                            if args.save_numpy:
+                                np.savez_compressed(save_dir / ('test_' + name + '.npz'), **full_result_dict)
                         
                         full_result_dict = {key: value.cpu() for key, value in result_dict.items()}
                 last_filename = filename
