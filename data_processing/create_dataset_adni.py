@@ -65,13 +65,13 @@ parser.add_argument(
 
 # @dataclass
 # class ReplaceArgs:
-#     data_path = Path("/home/feiner/datasets/")
+#     data_path = Path(os.environ["FASTMRI_ROOT"]).expanduser()
+#     csv_file = Path("../datasets/singlecoil_adni").resolve()
 #     dataset = "adni/data/singlecoil"
-#     original_data_path =Path("/home/feiner/datasets/adni/adni/ADNI")
-#     input_csv_file_dir=Path("/home/feiner/datasets/adni") #DXSUM_PDXCONV_ADNIALL.csv
-#     split_file=Path("../datasets/singlecoil_adni_split.json").resolve()
-#     csv_file=Path("../datasets/singlecoil_adni").resolve()
-#     do_split=True
+#     original_data_path = Path("~/datasets/adni/adni/ADNI").expanduser()
+#     input_csv_file_dir = Path("~/datasets/adni").expanduser()
+#     split_file = Path("../datasets/singlecoil_adni_split.json").resolve()
+#     do_split = True
 
 # args = ReplaceArgs()
 
@@ -274,7 +274,7 @@ assert 1 == df_to_process.groupby("PTID").subset.nunique().max()
 for subset_name in split_dict.keys():
     df_subset = df_to_process[df_to_process.subset == subset_name]
     # init dicts for infos that will be extracted from the dataset
-    img_info = {"filename" : []}
+    img_info = {"filename" : [], "xml_path" : [], "image_path" : []}
     acq_info = {"has_nan":[], "has_zero_slices":[], "has_zero_only":[]}
     seq_info = {}
     enc_info = {"nPE" : []}
@@ -306,13 +306,17 @@ for subset_name in split_dict.keys():
         acc_info["acc"].append(0)
         acc_info["num_low_freq"].append(0)
 
-        file_name = subset_path / (xml_path.stem + ".h5")
-        img_info["filename"].append(file_name)
-        with h5py.File(file_name, "w") as hf:
+        file_name = (xml_path.stem + ".h5")
+        file_path = subset_path / (xml_path.stem + ".h5")
+        img_info["xml_path"].append(xml_path.relative_to(args.original_data_path))
+        img_info["image_path"].append(image_path.relative_to(args.original_data_path))
+        img_info["filename"].append(file_path.relative_to(dataset_path))
+        with h5py.File(file_path, "w") as hf:
             hf.create_dataset("kspace", data=transformed, compression="gzip")
             hf.create_dataset("reconstruction_esc", data=array, compression="gzip")
 
-    data_info = {**img_info, **acq_info, **enc_info, **acc_info, **seq_info, **df_subset.to_dict("list")}
+    df_dict = df_subset.drop(columns=["xml_path", "image_path"]).to_dict("list")
+    data_info = {**img_info, **acq_info, **enc_info, **acc_info, **seq_info, **df_dict}
 
     # convert to pandas
     df = pd.DataFrame(data_info)
