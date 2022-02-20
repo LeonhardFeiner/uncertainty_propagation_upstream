@@ -67,6 +67,8 @@ class FastmriCartesianDatasetBase(object):
                 maxsl = np.minimum(subj.slices_max, num_slices - 1)
             elif 'max' in slices and slices['max'] > 0:
                 maxsl = np.minimum(slices['max'], num_slices - 1)
+            elif 'max' in slices and slices['max'] < 0:
+                maxsl = np.maximum(minsl, num_slices + slices['max'])
             else:
                 maxsl = num_slices - 1
 
