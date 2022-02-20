@@ -23,11 +23,14 @@ def get_args():
     # training related
     parser.add_argument("--ckpt_path", default=None)
     parser.add_argument("--mode", default='singlecoil_val')
-    parser.add_argument("--cal_metrics", default=False)
-    parser.add_argument("--wandb", default=False)
-    parser.add_argument("--save_mat", default=False)
-    parser.add_argument("--save_pickle", default=False)
-    parser.add_argument("--save_numpy", default=False)
+    parser.add_argument("--cal-metrics", action='store_true')
+    parser.add_argument("--wandb", action='store_true')
+    parser.add_argument("--save-mat", action='store_true')
+    parser.add_argument("--save-pickle", action='store_true')
+    parser.add_argument("--save-numpy", action='store_true')
+    parser.add_argument("--save-gnd", action='store_true')
+    parser.add_argument('--no-save-gnd', dest='save_gnd', action='store_false')
+    parser.set_defaults(save_gnd=True)
 
     parser.add_argument("--model", default='dncn', type=str)
     parser.add_argument("--num_workers", default=8, type=int)
@@ -57,15 +60,16 @@ def test_all(net, device, args):
     config_path = './config.yml'
     config = loadYaml(config_path, 'BaseExperiment')
     # config['batch_size'] = 1
-    dataset = FastmriCartesianDataset(config=config, mode=args.mode, extra_keys=["fname"])
+    dataset = FastmriCartesianDataset(config=config, mode=args.mode, extra_keys=["fname", "slidx"])
     loader_args = dict(batch_size=1, num_workers=args.num_workers, pin_memory=True)
     dataloader = DataLoader(dataset, shuffle=False, **loader_args)
     
     exp_id = args.ckpt_path.split('/')[-2]
 
     if args.save_mat or args.save_pickle or args.save_numpy:
-        save_dir = Path('./test_results') / exp_id
-
+        acc_str = "_".join(f"{acc:02}" for acc in config["accelerations"])
+        save_dir = Path('./test_results') / f"{config['dataset_name']}_{args.mode}" / f"{exp_id}_acc{acc_str}" 
+        print(save_dir)
     n_test = len(dataset)
 
     #total_params = sum(p.numel() for p in net.parameters() if p.requires_grad)
@@ -85,7 +89,7 @@ def test_all(net, device, args):
             last_filename = None
             for batch in dataloader:
                 test_idx += 1
-                inputs, outputs, ((filename,),) = fastmri.data.prepare_batch(batch, device)
+                inputs, outputs, (filename,), slidx = fastmri.data.prepare_batch(batch, device)
 
                 x0 = inputs[0]
                 gnd = outputs[0]
@@ -172,7 +176,10 @@ def test_all(net, device, args):
 
                 if args.save_mat or args.save_pickle or args.save_numpy:    
                     Path(save_dir).mkdir(parents=True, exist_ok=True)
-                    result_dict =  {'recon':output, 'gnd': gnd}
+                    result_dict =  {'recon':output, "slidx": torch.as_tensor(slidx)}
+
+                    if args.save_gnd:
+                        result_dict['gnd'] =  gnd
                     if args.aleatoric:
                         result_dict['aleatoric_std'] = aleatoric_std
                     if args.epistemic:
@@ -188,6 +195,8 @@ def test_all(net, device, args):
                             name = Path(last_filename).stem
                             full_result_dict = {key: value.numpy() for key, value in full_result_dict.items()}
 
+                            mml = [str(fn(full_result_dict["slidx"])) for fn in (min, lambda x: max(x) + 1, len)]
+                            pbar.write("slidx range: " + ":".join(mml) + "; keys:" +",".join(full_result_dict.keys()))
                             if args.save_mat:
                                 scio.savemat(save_dir / ('test_' + name + '.mat'), full_result_dict)                            
                             if args.save_pickle:

@@ -43,7 +43,7 @@ class ToTorchIO():
             return inputs, outputs
         else:
             extra_data =  [sample[key] for key in self.extra_keys]
-            return inputs, outputs, extra_data
+            return tuple([inputs, outputs, *extra_data])
 
 class Magnitude():
     def __init__(self, keys):
@@ -478,7 +478,7 @@ def get_torch_transform(mode, config, extra_keys=None):
                     Transpose([('noisy', (0, 3, 1, 2)), ('reference',  (0, 3, 1, 2))]),
                     ToTorchIO(['noisy', 'kspace', 'mask'] + fg_mask, ['reference'], extra_keys)
                     ]
-    elif mode == 'singlecoil_val' or mode == 'singlecoil_test':
+    elif mode == 'singlecoil_val' or mode == 'singlecoil_test' or "1" in mode:
         transform = [GenerateRandomFastMRIChallengeMask(center_fractions=config['center_fractions'],
                                                         accelerations=config['accelerations'],
                                                         is_train=False),
