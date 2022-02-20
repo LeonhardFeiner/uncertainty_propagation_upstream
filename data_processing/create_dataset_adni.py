@@ -284,7 +284,11 @@ for subset_name in split_dict.keys():
     subset_path.mkdir(parents=True, exist_ok=True)
 
 
-    for xml_path, image_path in tqdm(df_subset[["xml_path", "image_path"]].itertuples(index=False)):
+    for xml_path, image_path in tqdm(
+        df_subset[["xml_path", "image_path"]].itertuples(index=False),
+        desc=subset_name,
+        total=len(df_subset),
+    ):
         image = nib.load(image_path)
 
         array = np.squeeze(image.get_fdata(), -1).T
