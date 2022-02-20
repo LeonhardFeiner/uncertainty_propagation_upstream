@@ -140,7 +140,7 @@ for subset_name, image_names in split_dict.items():
 
      for fname in tqdm(image_names):
           full_path = args.data_path / fname
-          label_info['is_left_leg'].append(label_df.loc[full_path.name])
+          label_info['is_left_leg'].append(label_df.loc[full_path.name].is_left_leg)
           
           dset =  h5py.File(full_path,'r')
           acq = dset.attrs['acquisition']
