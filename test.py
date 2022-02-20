@@ -87,6 +87,7 @@ def test_all(net, device, args):
     with torch.no_grad():
         with tqdm(total=n_test, desc=f'Test case {test_idx + 1}/{n_test}', unit='img') as pbar:
             last_filename = None
+            files_count = 0
             for batch in dataloader:
                 test_idx += 1
                 inputs, outputs, (filename,), slidx = fastmri.data.prepare_batch(batch, device)
@@ -191,12 +192,16 @@ def test_all(net, device, args):
                             for key, last in full_result_dict.items()
                         }
                     else:
+                        if last_filename is None:
+                            pbar.write("keys to save: " +",".join(result_dict.keys()))
                         if last_filename is not None:
                             name = Path(last_filename).stem
                             full_result_dict = {key: value.numpy() for key, value in full_result_dict.items()}
+                            files_count += 1
 
                             mml = [str(fn(full_result_dict["slidx"])) for fn in (min, lambda x: max(x) + 1, len)]
-                            pbar.write("slidx range: " + ":".join(mml) + "; keys:" +",".join(full_result_dict.keys()))
+                            pbar.set_postfix(file_index=files_count, slice_range=":".join(mml))
+
                             if args.save_mat:
                                 scio.savemat(save_dir / ('test_' + name + '.mat'), full_result_dict)                            
                             if args.save_pickle:
