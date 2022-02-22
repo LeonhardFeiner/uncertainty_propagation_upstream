@@ -308,9 +308,9 @@ for subset_name in split_dict.keys():
 
         file_name = (xml_path.stem + ".h5")
         file_path = subset_path / (xml_path.stem + ".h5")
-        img_info["xml_path"].append(xml_path.relative_to(args.original_data_path))
-        img_info["image_path"].append(image_path.relative_to(args.original_data_path))
-        img_info["filename"].append(file_path.relative_to(dataset_path))
+        img_info["xml_path"].append(xml_path.relative_to(args.data_path))
+        img_info["image_path"].append(image_path.relative_to(args.data_path))
+        img_info["filename"].append(file_path.relative_to(args.data_path))
         with h5py.File(file_path, "w") as hf:
             hf.create_dataset("kspace", data=transformed, compression="gzip")
             hf.create_dataset("reconstruction_esc", data=array, compression="gzip")

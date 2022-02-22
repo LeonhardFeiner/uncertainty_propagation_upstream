@@ -50,12 +50,6 @@ def get_args():
 
 
     # dataset
-    #parser.add_argument("--challenge", default="singlecoil")
-    #parser.add_argument("--data_path", default="/home/wenqi/Data/FastMRI/knee/data")
-    #parser.add_argument("--mask_type", default="random")
-    #parser.add_argument("--center_fractions", default=[0.08], type=float)
-    #parser.add_argument("--accelerations", default=[4], type=int)
-    #parser.add_argument("--batch_size", default=1, type=int)
     parser.add_argument("--num_workers", default=8, type=int)
     parser.add_argument("--regularizer", default='Real2chCNN', type=str)
     parser.add_argument("--shared-params", action='store_true', help='Sharing paramters over cascades')
@@ -81,8 +75,6 @@ def get_args():
 
 
 def train(net, device, args):
-    #os.environ['FASTMRI_ROOT'] = '/home/wenqi/Data/FastMRI'
-
     config_path = './config.yml'
     config = loadYaml(config_path, 'BaseExperiment')
     train_dataset = FastmriCartesianDataset(config, mode='singlecoil_train')

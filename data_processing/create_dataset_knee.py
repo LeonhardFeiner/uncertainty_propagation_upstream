@@ -63,14 +63,14 @@ args = parser.parse_args()
 
 # @dataclass
 # class ReplaceArgs:
-#     data_path=Path(os.environ["FASTMRI_ROOT"])
+#     data_path = Path(os.environ["FASTMRI_ROOT"]).expanduser()
 #     csv_file = Path("../datasets/singlecoil_knee")
-#     train_dataset = "knee/data/singlecoil_train" #knee/data/singlecoil_train 
+#     train_dataset = "knee/data/singlecoil_train"
 #     train_annotations_file = Path("../datasets/kneeside_annotation_train.csv")
-#     test_dataset = "knee/data/singlecoil_val" #knee/data/singlecoil_train 
+#     test_dataset = "knee/data/singlecoil_val"
 #     test_annotations_file = Path("../datasets/kneeside_annotation_val.csv")
-#     split_file=Path("../datasets/singlecoil_knee_split.json").resolve()
-#     do_split=True
+#     split_file = Path("../datasets/singlecoil_knee_split.json").resolve()
+#     do_split = True
 
 # args = ReplaceArgs()
 
