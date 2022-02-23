@@ -80,7 +80,13 @@ def test_all(net, device, args):
         experiment = wandb.init(project="dccnn-dp", reinit=False, name='TEST-'+exp_id, config=expconfig)
 
     test_idx = 0
+    sample_count = 0
     avg_l1 = 0
+    avg_l2 = 0
+    if args.aleatoric:
+        avg_aleatoric = 0
+    if args.epistemic:
+        avg_epistemic = 0
     avg_nmse = 0
     avg_psnr = 0
     avg_ssim = 0
@@ -132,12 +138,19 @@ def test_all(net, device, args):
                     fg_mask = torch.ones_like(output.abs())
 
                 if args.cal_metrics:
-                    l1, nmse, psnr, ssim = F_fastmri.evaluate(output.abs(), gnd.abs(), (-2,-1), fg_mask)
+                    l1, l2, nmse, psnr, ssim = F_fastmri.evaluate(output.abs(), gnd.abs(), (-2,-1), fg_mask)
+                    
+                    if args.aleatoric:
+                        avg_aleatoric += torch.mean(torch.square(aleatoric_std)) * len(x0)
+                    if args.epistemic:
+                        avg_epistemic += torch.mean(epistemic_var) * len(x0)
 
-                avg_l1 += l1 / len(dataloader)
-                avg_nmse += nmse / len(dataloader)
-                avg_psnr += psnr / len(dataloader)
-                avg_ssim += ssim / len(dataloader)
+                    sample_count += len(x0)
+                    avg_l1 += l1 * len(x0)
+                    avg_l2 += l2 * len(x0)
+                    avg_nmse += nmse * len(x0)
+                    avg_psnr += psnr * len(x0)
+                    avg_ssim += ssim * len(x0)
 
                 if args.wandb:
                     log_input_im = x0[0].abs().flip(1)
@@ -223,17 +236,40 @@ def test_all(net, device, args):
                     pickle.dump(full_result_dict, file)
         
     if args.cal_metrics:
+
+        if args.aleatoric:
+            avg_aleatoric /= sample_count
+            avg_aleatoric_std = torch.sqrt(avg_aleatoric)
+        if args.epistemic:
+            avg_epistemic /= sample_count
+            avg_epistemic_std = torch.sqrt(avg_epistemic)
+
+
+        avg_l1 /= sample_count
+        avg_l2 /= sample_count
+        avg_nmse /= sample_count
+        avg_psnr /= sample_count
+        avg_ssim /= sample_count
+
+        log_dict = {
+                'avg_l1': avg_l1.item(),
+                'avg_l2': avg_l2.item(),
+                'avg_nmse': avg_nmse.item(),
+                'avg_psnr': avg_psnr.item(),
+                'avg_ssim': avg_ssim.item(),
+            }
+
+        if args.aleatoric:
+            log_dict['avg_aleatoric_std'] = avg_aleatoric_std.item()
+        if args.epistemic:
+            log_dict['avg_epistemic_std'] = avg_epistemic_std.item()
+
         if args.wandb:
-            experiment.log({
-                'avg_nmse': avg_nmse,
-                'avg_l1': avg_l1,
-                'avg_psnr': avg_psnr,
-                'avg_ssim': avg_ssim
-            })
-        logging.info(f'avg_l1: {avg_l1}')
-        logging.info(f'avg_nmse: {avg_nmse}')
-        logging.info(f'avg_psnr: {avg_psnr}')
-        logging.info(f'avg_ssim: {avg_ssim}')
+            experiment.log(log_dict)
+
+        for key, value in log_dict.items():
+            logging.info(f'{key}: {value}')
+
                 
 
 

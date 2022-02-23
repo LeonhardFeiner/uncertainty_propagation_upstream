@@ -103,13 +103,14 @@ def evaluate(
 
     nmse = medutils.measures.nmse(masked_input, masked_target, axes=dim) #* mask_norm
     l1 = (F.l1_loss(input * mask, target * mask, reduction='none') / mask_norm).view(input.shape[0], -1).sum(-1).mean()
+    l2 = (F.mse_loss(input * mask, target * mask, reduction='none') / mask_norm).view(input.shape[0], -1).sum(-1).mean()
     psnr = medutils.measures.psnr(masked_input, masked_target, axes=dim)# * mask_norm
     ssim_batch = [0 for i in range(input.shape[0])]
     for i in range(input.shape[0]):
         ssim_batch[i] = structural_similarity(masked_input[i,:].squeeze(), masked_target[i,:].squeeze(), axes=dim)
     ssim = np.mean(ssim_batch)
 
-    return l1, nmse, psnr, ssim
+    return l1, l2, nmse, psnr, ssim
 
     
 import unittest
