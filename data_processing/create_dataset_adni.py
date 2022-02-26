@@ -280,6 +280,22 @@ for subset_name in split_dict.keys():
     enc_info = {"nPE" : []}
     acc_info = {"acc" : [], "num_low_freq" : []}
 
+    nifti_info = {
+        "spacing_x": [],
+        "spacing_y": [],
+        "spacing_z": [],
+        "spacing_time": [], 
+        "shape_x": [],
+        "shape_y": [],
+        "shape_z": [],
+        "quatern_b": [],
+        "quatern_c": [],
+        "quatern_d": [],
+        "qoffset_x": [],
+        "qoffset_y": [],
+        "qoffset_z": [],
+    }
+
     subset_path = dataset_path / subset_name
     subset_path.mkdir(parents=True, exist_ok=True)
 
@@ -290,6 +306,28 @@ for subset_name in split_dict.keys():
         total=len(df_subset),
     ):
         image = nib.load(image_path)
+        spacing_x, spacing_y, spacing_z, spacing_time = image.header.get_zooms()
+        shape_x, shape_y, shape_z, _ = image.shape
+        quatern_b = image.header["quatern_b"].item()
+        quatern_c = image.header["quatern_c"].item()
+        quatern_d = image.header["quatern_d"].item()
+        qoffset_x = image.header["qoffset_x"].item()
+        qoffset_y = image.header["qoffset_y"].item()
+        qoffset_z = image.header["qoffset_z"].item()
+
+        nifti_info["spacing_x"].append(spacing_x)
+        nifti_info["spacing_y"].append(spacing_y)
+        nifti_info["spacing_z"].append(spacing_z)
+        nifti_info["spacing_time"].append(spacing_time)
+        nifti_info["shape_x"].append(shape_x)
+        nifti_info["shape_y"].append(shape_y)
+        nifti_info["shape_z"].append(shape_z)
+        nifti_info["quatern_b"].append(quatern_b)
+        nifti_info["quatern_c"].append(quatern_c)
+        nifti_info["quatern_d"].append(quatern_d)
+        nifti_info["qoffset_x"].append(qoffset_x)
+        nifti_info["qoffset_y"].append(qoffset_y)
+        nifti_info["qoffset_z"].append(qoffset_z)
 
         array = np.squeeze(image.get_fdata(), -1).T
         noise = complex_randn(*array.shape, random_gen=rng) * (2 ** 6)
@@ -316,7 +354,7 @@ for subset_name in split_dict.keys():
             hf.create_dataset("reconstruction_esc", data=array, compression="gzip")
 
     df_dict = df_subset.drop(columns=["xml_path", "image_path"]).to_dict("list")
-    data_info = {**img_info, **acq_info, **enc_info, **acc_info, **seq_info, **df_dict}
+    data_info = {**img_info, **nifti_info, **acq_info, **enc_info, **acc_info, **seq_info, **df_dict}
 
     # convert to pandas
     df = pd.DataFrame(data_info)
