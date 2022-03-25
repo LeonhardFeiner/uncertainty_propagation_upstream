@@ -285,7 +285,7 @@ def train(net, device, args):
 
 
                     #val_loss = F_fastmri.masked_l1_loss(output.abs(), gnd.abs(), fg_mask)
-                    l1, nmse, psnr, ssim = F_fastmri.evaluate(output.abs(), gnd.abs(), (-2,-1), fg_mask)
+                    l1, l2, nmse, psnr, ssim = F_fastmri.evaluate(output.abs(), gnd.abs(), (-2,-1), fg_mask)
 
                     # logging.info('Validation {}/{} loss: {}'.format(idx, ceil(n_val / args.batch_size), val_loss))
 
@@ -312,6 +312,7 @@ def train(net, device, args):
 
                     #val_score += val_loss / len(val_dataloader)
                     val_l1 += l1 / len(val_dataloader)
+                    val_l2 += l2 / len(val_dataloader)
                     val_nmse += nmse / len(val_dataloader)
                     val_psnr += psnr / len(val_dataloader)
                     val_ssim += ssim / len(val_dataloader)
@@ -328,7 +329,8 @@ def train(net, device, args):
 
             log_dict = {
                 #'val/lr': optimizer.param_groups[0]['lr'],
-                'val/loss': val_l1,
+                'val/l1': val_l1,
+                'val/l2': val_l2,
                 'val/nmse': val_nmse,
                 'val/psnr': val_psnr,
                 'val/ssim': val_ssim,
