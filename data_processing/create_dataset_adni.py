@@ -193,8 +193,10 @@ dataset_path = Path(args.data_path) / args.dataset
 csv_dir = Path(args.input_csv_file_dir)
 
 input_df = pd.read_csv(csv_dir / "DXSUM_PDXCONV_ADNIALL.csv")
-volume_df = pd.read_csv(csv_dir / "FOXLABBSI_01_25_22.csv")
-other_df = pd.read_csv(csv_dir / "idaSearch_2_18_2022.csv")
+volume_path, = csv_dir.glob("FOXLABBSI_*.csv")
+other_path, = csv_dir.glob("idaSearch_*.csv")
+volume_df = pd.read_csv(volume_path)
+other_df = pd.read_csv(other_path)
 
 # %%
 xml_df = pd.DataFrame(
