@@ -350,8 +350,12 @@ for subset_name in split_dict.keys():
         img_info["image_path"].append(image_path.relative_to(args.data_path))
         img_info["filename"].append(file_path.relative_to(args.data_path))
         with h5py.File(file_path, "w") as hf:
-            hf.create_dataset("kspace", data=transformed, compression="gzip")
-            hf.create_dataset("reconstruction_esc", data=array, compression="gzip")
+            chunks = (1, *array.shape[1:])
+            compression = "gzip"
+            hf.create_dataset("kspace", data=transformed, chunks=chunks, compression=compression)
+            hf.create_dataset(
+                "reconstruction_esc", data=array, chunks=chunks, compression=compression
+            )
 
     df_dict = df_subset.drop(columns=["xml_path", "image_path"]).to_dict("list")
     data_info = {**img_info, **nifti_info, **acq_info, **enc_info, **acc_info, **seq_info, **df_dict}
