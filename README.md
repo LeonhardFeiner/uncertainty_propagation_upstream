@@ -67,3 +67,5 @@ change both `accelerations:`  and `center_fractions` to a single value within `c
 ```
 python test.py --regularizer Real2chCNN --aleatoric --l2 --non-diag-rank 8 --log-low-rank --ckpt_path <path to checkpoint>/checkpoint_epoch100.pth --cal-metrics --save-hdf5 --mode singlecoil_train1 --save-gnd --combined-extra-network --num_workers 8 
 ```
+
+repeat for all accelerations
