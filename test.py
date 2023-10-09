@@ -16,6 +16,7 @@ import fastmri.functional as F_fastmri
 from pathlib import Path
 import pickle
 import scipy.io as scio
+import h5py
 
 def get_args():
     parser = ArgumentParser()
@@ -28,6 +29,7 @@ def get_args():
     parser.add_argument("--save-mat", action='store_true')
     parser.add_argument("--save-pickle", action='store_true')
     parser.add_argument("--save-numpy", action='store_true')
+    parser.add_argument("--save-hdf5", action='store_true')
     parser.add_argument("--save-gnd", action='store_true')
     parser.add_argument('--no-save-gnd', dest='save_gnd', action='store_false')
     parser.set_defaults(save_gnd=True)
@@ -66,7 +68,7 @@ def test_all(net, device, args):
     
     exp_id = args.ckpt_path.split('/')[-2]
 
-    if args.save_mat or args.save_pickle or args.save_numpy:
+    if args.save_mat or args.save_pickle or args.save_numpy or args.save_hdf5:
         acc_str = "_".join(f"{acc:02}" for acc in config["accelerations"])
         save_dir = Path('./test_results') / f"{config['dataset_name']}_{args.mode}" / f"{exp_id}_acc{acc_str}" 
         print(save_dir)
@@ -188,7 +190,7 @@ def test_all(net, device, args):
                                 'val/results': wandb.Image(log_im.float().cpu()),
                             })
 
-                if args.save_mat or args.save_pickle or args.save_numpy:    
+                if args.save_mat or args.save_pickle or args.save_numpy or args.save_hdf5:    
                     Path(save_dir).mkdir(parents=True, exist_ok=True)
                     result_dict =  {'recon':output, "slidx": torch.as_tensor(slidx)}
 
@@ -222,6 +224,16 @@ def test_all(net, device, args):
                                     pickle.dump(full_result_dict, file)
                             if args.save_numpy:
                                 np.savez_compressed(save_dir / ('test_' + name + '.npz'), **full_result_dict)
+                            if args.save_hdf5:
+                                with h5py.File(save_dir / ('test_' + name + '.hdf5'), "w") as f:
+                                    for key, array in full_result_dict.items():
+                                        chunks = (1, *array.shape[1:])
+                                        f.create_dataset(
+                                            key,
+                                            data=array,
+                                            chunks=chunks,
+                                            compression="gzip" if args.save_compressed else 0
+                                            )
                         
                         full_result_dict = {key: value.cpu() for key, value in result_dict.items()}
                 last_filename = filename
